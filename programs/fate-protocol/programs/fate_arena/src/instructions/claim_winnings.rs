@@ -67,36 +67,49 @@ pub fn handler(ctx: Context<ClaimWinnings>) -> Result<()> {
     let user_profile = &mut ctx.accounts.user_profile;
     let config = &ctx.accounts.config;
 
-    let winning_side = match_account.winning_side.ok_or(ErrorCode::InvalidMatchStatus)?;
+    // Check if this is a refund case (no winners, prices equal)
+    let is_refund = match_account.winning_side.is_none();
 
-    // Check if player won
-    let is_winner = player_entry.prediction == Some(winning_side);
+    // Check if player won (or getting refund)
+    let is_winner = if is_refund {
+        // Everyone gets refund
+        true
+    } else {
+        // Check if prediction matches winning side
+        let winning_side = match_account.winning_side.unwrap();
+        player_entry.prediction == Some(winning_side)
+    };
 
-    // Calculate winnings
-    let protocol_fee = match_account.calculate_protocol_fee(config.protocol_fee_bps);
-    let prize_pool = match_account.calculate_prize_pool(config.protocol_fee_bps);
+    // Calculate winnings based on refund vs winner scenario
+    let per_winner_amount = if is_refund {
+        // Refund case: everyone gets their entry fee back (no protocol fee)
+        msg!("REFUND: Prices equal, returning entry fee");
+        player_entry.amount_staked
+    } else {
+        // Normal winner case
+        let protocol_fee = match_account.calculate_protocol_fee(config.protocol_fee_bps);
+        let prize_pool = match_account.calculate_prize_pool(config.protocol_fee_bps);
 
-    // We need to count winners from remaining_accounts
-    // For simplicity in this example, we'll use a fixed calculation
-    // In production, you'd pass all PlayerEntry accounts in remaining_accounts
-    let mut winner_count = 0u64;
+        // We need to count winners from remaining_accounts
+        let mut winner_count = 0u64;
 
-    // Count winners from remaining accounts
-    for account_info in ctx.remaining_accounts.iter() {
-        if let Ok(entry) = PlayerEntry::try_deserialize(&mut &account_info.data.borrow()[..]) {
-            if entry.match_account == match_account.key() &&
-               entry.prediction == Some(winning_side) {
-                winner_count += 1;
+        // Count winners from remaining accounts
+        for account_info in ctx.remaining_accounts.iter() {
+            if let Ok(entry) = PlayerEntry::try_deserialize(&mut &account_info.data.borrow()[..]) {
+                if entry.match_account == match_account.key() &&
+                   entry.prediction == match_account.winning_side {
+                    winner_count += 1;
+                }
             }
         }
-    }
 
-    require!(winner_count > 0, ErrorCode::NoWinnings);
+        require!(winner_count > 0, ErrorCode::NoWinnings);
 
-    let per_winner_amount = if is_winner {
-        prize_pool / winner_count
-    } else {
-        0
+        if is_winner {
+            prize_pool / winner_count
+        } else {
+            0
+        }
     };
 
     // Update player entry
@@ -109,7 +122,20 @@ pub fn handler(ctx: Context<ClaimWinnings>) -> Result<()> {
     user_profile.total_wagered = user_profile.total_wagered.checked_add(player_entry.amount_staked)
         .ok_or(ErrorCode::ArithmeticOverflow)?;
 
-    if is_winner {
+    if is_refund {
+        // Refund case: no win/loss, just participation XP
+        user_profile.total_won = user_profile.total_won.checked_add(per_winner_amount)
+            .ok_or(ErrorCode::ArithmeticOverflow)?;
+
+        // Base XP for participation only
+        let xp_gained = BASE_XP_PER_MATCH;
+        user_profile.xp = user_profile.xp.checked_add(xp_gained)
+            .ok_or(ErrorCode::ArithmeticOverflow)?;
+        user_profile.level = user_profile.calculate_level();
+
+        // No streak change on refund
+    } else if is_winner {
+        // Normal win case
         user_profile.wins = user_profile.wins.checked_add(1)
             .ok_or(ErrorCode::ArithmeticOverflow)?;
         user_profile.total_won = user_profile.total_won.checked_add(per_winner_amount)
@@ -120,7 +146,11 @@ pub fn handler(ctx: Context<ClaimWinnings>) -> Result<()> {
         user_profile.xp = user_profile.xp.checked_add(xp_gained)
             .ok_or(ErrorCode::ArithmeticOverflow)?;
         user_profile.level = user_profile.calculate_level();
+
+        // Update streak for win
+        user_profile.update_streak(true);
     } else {
+        // Normal loss case
         user_profile.losses = user_profile.losses.checked_add(1)
             .ok_or(ErrorCode::ArithmeticOverflow)?;
 
@@ -129,16 +159,17 @@ pub fn handler(ctx: Context<ClaimWinnings>) -> Result<()> {
         user_profile.xp = user_profile.xp.checked_add(xp_gained)
             .ok_or(ErrorCode::ArithmeticOverflow)?;
         user_profile.level = user_profile.calculate_level();
+
+        // Update streak for loss
+        user_profile.update_streak(false);
     }
 
-    // Update streak
-    user_profile.update_streak(is_winner);
-
-    // Transfer winnings if player won
+    // Transfer winnings or refund if player gets any amount
     if per_winner_amount > 0 {
+        let match_key = match_account.key();
         let vault_seeds = &[
             seeds::VAULT,
-            match_account.key().as_ref(),
+            match_key.as_ref(),
             &[ctx.bumps.vault],
         ];
         let signer_seeds = &[&vault_seeds[..]];
@@ -156,27 +187,33 @@ pub fn handler(ctx: Context<ClaimWinnings>) -> Result<()> {
         )?;
     }
 
-    // Transfer protocol fee to treasury (only once, we can check if vault balance > prize pool)
-    let vault_balance = ctx.accounts.vault.lamports();
-    if vault_balance >= protocol_fee {
-        let vault_seeds = &[
-            seeds::VAULT,
-            match_account.key().as_ref(),
-            &[ctx.bumps.vault],
-        ];
-        let signer_seeds = &[&vault_seeds[..]];
+    // Transfer protocol fee to treasury ONLY in non-refund cases
+    // (only once, we can check if vault balance is sufficient)
+    if !is_refund {
+        let protocol_fee = match_account.calculate_protocol_fee(config.protocol_fee_bps);
+        let vault_balance = ctx.accounts.vault.lamports();
 
-        anchor_lang::system_program::transfer(
-            CpiContext::new_with_signer(
-                ctx.accounts.system_program.to_account_info(),
-                anchor_lang::system_program::Transfer {
-                    from: ctx.accounts.vault.to_account_info(),
-                    to: ctx.accounts.treasury.to_account_info(),
-                },
-                signer_seeds,
-            ),
-            protocol_fee,
-        )?;
+        if vault_balance >= protocol_fee {
+            let match_key = match_account.key();
+            let vault_seeds = &[
+                seeds::VAULT,
+                match_key.as_ref(),
+                &[ctx.bumps.vault],
+            ];
+            let signer_seeds = &[&vault_seeds[..]];
+
+            anchor_lang::system_program::transfer(
+                CpiContext::new_with_signer(
+                    ctx.accounts.system_program.to_account_info(),
+                    anchor_lang::system_program::Transfer {
+                        from: ctx.accounts.vault.to_account_info(),
+                        to: ctx.accounts.treasury.to_account_info(),
+                    },
+                    signer_seeds,
+                ),
+                protocol_fee,
+            )?;
+        }
     }
 
     emit!(WinningsClaimed {
@@ -184,6 +221,7 @@ pub fn handler(ctx: Context<ClaimWinnings>) -> Result<()> {
         player: ctx.accounts.player.key(),
         amount: per_winner_amount,
         is_winner,
+        is_refund,
         new_level: user_profile.level,
     });
 
@@ -214,5 +252,6 @@ pub struct WinningsClaimed {
     pub player: Pubkey,
     pub amount: u64,
     pub is_winner: bool,
+    pub is_refund: bool,
     pub new_level: u16,
 }

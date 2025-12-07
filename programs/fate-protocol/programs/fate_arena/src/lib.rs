@@ -1,7 +1,10 @@
 use anchor_lang::prelude::*;
 
 pub mod instructions;
+pub mod utils;
+
 use instructions::*;
+pub use utils::*;
 
 declare_id!("FATEarenaBVy3Q8xPzRZYVHf8k3J7d5cKqX4mW9sPump");
 
@@ -550,11 +553,20 @@ pub enum ErrorCode {
     #[msg("Not enough players to start")]
     NotEnoughPlayers,
 
-    #[msg("Stale price data")]
-    StalePriceData,
+    #[msg("Price data is stale (older than 30 seconds)")]
+    StalePrice,
 
-    #[msg("Invalid Pyth account")]
+    #[msg("Invalid Pyth account or data")]
     InvalidPythAccount,
+
+    #[msg("Price feed does not match expected feed")]
+    PriceFeedMismatch,
+
+    #[msg("Price is unavailable or invalid")]
+    PriceUnavailable,
+
+    #[msg("Confidence interval is too wide (>1%)")]
+    ConfidenceIntervalTooWide,
 
     #[msg("Unauthorized")]
     Unauthorized,

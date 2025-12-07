@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
-use pyth_solana_receiver_sdk::price_update::{get_feed_id_from_hex, PriceUpdateV2};
+use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
 use crate::{
     Market, Match, PlayerEntry, MatchStatus, PredictionSide,
-    ErrorCode, seeds, constants::PYTH_STALENESS_THRESHOLD
+    ErrorCode, seeds, utils::pyth::*,
 };
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
@@ -49,6 +49,7 @@ pub struct SubmitPrediction<'info> {
 pub fn handler(ctx: Context<SubmitPrediction>, params: SubmitPredictionParams) -> Result<()> {
     let match_account = &mut ctx.accounts.match_account;
     let player_entry = &mut ctx.accounts.player_entry;
+    let market = &ctx.accounts.market;
     let clock = Clock::get()?;
 
     // Check if within prediction window
@@ -58,24 +59,42 @@ pub fn handler(ctx: Context<SubmitPrediction>, params: SubmitPredictionParams) -
         ErrorCode::PredictionWindowNotClosed
     );
 
-    // Get price from Pyth
-    let price_update = &ctx.accounts.price_update;
-    let feed_id = get_feed_id_from_hex(&ctx.accounts.market.pyth_price_feed.to_string())?;
+    // Get feed ID from market
+    let feed_id_hex = market.pyth_price_feed.to_string();
 
-    let price = price_update
-        .get_price_no_older_than(&clock, PYTH_STALENESS_THRESHOLD as u64, &feed_id)
-        .map_err(|_| ErrorCode::StalePriceData)?;
+    // Validate the price update account contains the correct feed
+    validate_price_feed(&ctx.accounts.price_update.to_account_info(), &feed_id_hex)?;
 
-    let current_price = price.price as u64;
-
-    // If this is the first prediction and match hasn't started, record start price and start match
+    // If this is the first prediction and match hasn't started, record start price
     if match_account.start_price.is_none() && match_account.status == MatchStatus::Open {
-        match_account.start_price = Some(current_price);
+        // Get current price from Pyth
+        let pyth_price = get_pyth_price(
+            &ctx.accounts.price_update,
+            &feed_id_hex,
+            &clock,
+        )?;
+
+        msg!(
+            "Start price set: {} (raw: {}, exp: {}, conf: {})",
+            pyth_price.normalized_price,
+            pyth_price.price,
+            pyth_price.exponent,
+            pyth_price.confidence
+        );
+
+        // Validate confidence interval
+        require!(
+            pyth_price.is_confidence_acceptable(),
+            ErrorCode::ConfidenceIntervalTooWide
+        );
+
+        // Record start price and start the match
+        match_account.start_price = Some(pyth_price.normalized_price);
         match_account.status = MatchStatus::InProgress;
         match_account.started_at = Some(clock.unix_timestamp);
     }
 
-    // Record prediction
+    // Record player's prediction
     player_entry.prediction = Some(params.prediction);
     player_entry.prediction_locked_at = Some(clock.unix_timestamp);
 
@@ -84,6 +103,7 @@ pub fn handler(ctx: Context<SubmitPrediction>, params: SubmitPredictionParams) -
         player: ctx.accounts.player.key(),
         prediction: params.prediction,
         start_price: match_account.start_price,
+        locked_at: clock.unix_timestamp,
     });
 
     Ok(())
@@ -95,4 +115,5 @@ pub struct PredictionSubmitted {
     pub player: Pubkey,
     pub prediction: PredictionSide,
     pub start_price: Option<u64>,
+    pub locked_at: i64,
 }

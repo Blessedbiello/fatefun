@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
-use pyth_solana_receiver_sdk::price_update::{get_feed_id_from_hex, PriceUpdateV2};
+use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
 use crate::{
     GameConfig, Market, Match, MatchStatus, PredictionSide,
-    ErrorCode, seeds, constants::PYTH_STALENESS_THRESHOLD
+    ErrorCode, seeds, utils::pyth::*,
 };
 
 #[derive(Accounts)]
@@ -39,37 +39,70 @@ pub struct ResolveMatch<'info> {
 pub fn handler(ctx: Context<ResolveMatch>) -> Result<()> {
     let config = &mut ctx.accounts.config;
     let match_account = &mut ctx.accounts.match_account;
+    let market = &ctx.accounts.market;
     let clock = Clock::get()?;
 
-    // Get end price from Pyth
-    let price_update = &ctx.accounts.price_update;
-    let feed_id = get_feed_id_from_hex(&ctx.accounts.market.pyth_price_feed.to_string())?;
-
-    let price = price_update
-        .get_price_no_older_than(&clock, PYTH_STALENESS_THRESHOLD as u64, &feed_id)
-        .map_err(|_| ErrorCode::StalePriceData)?;
-
-    let end_price = price.price as u64;
+    // Get start price
     let start_price = match_account.start_price.ok_or(ErrorCode::MatchNotStarted)?;
 
-    // Determine winning side
-    let winning_side = if end_price > start_price {
-        PredictionSide::Higher
-    } else if end_price < start_price {
-        PredictionSide::Lower
-    } else {
-        // If price is exactly the same, Higher wins (house rule)
-        PredictionSide::Higher
+    // Get feed ID from market
+    let feed_id_hex = market.pyth_price_feed.to_string();
+
+    // Validate the price update account contains the correct feed
+    validate_price_feed(&ctx.accounts.price_update.to_account_info(), &feed_id_hex)?;
+
+    // Get end price from Pyth with full validation
+    let pyth_price = get_pyth_price(
+        &ctx.accounts.price_update,
+        &feed_id_hex,
+        &clock,
+    )?;
+
+    msg!(
+        "End price: {} (raw: {}, exp: {}, conf: {})",
+        pyth_price.normalized_price,
+        pyth_price.price,
+        pyth_price.exponent,
+        pyth_price.confidence
+    );
+
+    // Validate confidence interval
+    require!(
+        pyth_price.is_confidence_acceptable(),
+        ErrorCode::ConfidenceIntervalTooWide
+    );
+
+    let end_price = pyth_price.normalized_price;
+
+    // Compare prices to determine winner
+    let price_comparison = compare_prices(start_price, end_price);
+
+    let winning_side = match price_comparison {
+        PriceComparison::Higher => {
+            msg!("Price went UP: {} -> {}", start_price, end_price);
+            Some(PredictionSide::Higher)
+        },
+        PriceComparison::Lower => {
+            msg!("Price went DOWN: {} -> {}", start_price, end_price);
+            Some(PredictionSide::Lower)
+        },
+        PriceComparison::Equal => {
+            // Edge case: price is exactly the same
+            // No winners, all players will get refunds in claim_winnings
+            msg!("Price stayed EQUAL: {} = {} (REFUND ALL)", start_price, end_price);
+            None
+        },
     };
 
-    // Update match
+    // Update match state
     match_account.end_price = Some(end_price);
-    match_account.winning_side = Some(winning_side);
+    match_account.winning_side = winning_side;
     match_account.status = MatchStatus::Completed;
     match_account.resolved_at = Some(clock.unix_timestamp);
 
     // Update global stats
-    config.total_volume = config.total_volume.checked_add(match_account.total_pot)
+    config.total_volume = config.total_volume
+        .checked_add(match_account.total_pot)
         .ok_or(ErrorCode::ArithmeticOverflow)?;
 
     emit!(MatchResolved {
@@ -78,6 +111,11 @@ pub fn handler(ctx: Context<ResolveMatch>) -> Result<()> {
         end_price,
         winning_side,
         total_pot: match_account.total_pot,
+        price_change: if end_price > start_price {
+            (end_price - start_price) as i64
+        } else {
+            -((start_price - end_price) as i64)
+        },
     });
 
     Ok(())
@@ -88,6 +126,7 @@ pub struct MatchResolved {
     pub match_id: u64,
     pub start_price: u64,
     pub end_price: u64,
-    pub winning_side: PredictionSide,
+    pub winning_side: Option<PredictionSide>,
     pub total_pot: u64,
+    pub price_change: i64,
 }
