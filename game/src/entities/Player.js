@@ -40,6 +40,10 @@ class Player {
     this.chatBubble = null
     this.chatTimeout = null
 
+    // Glow effect (active when predicted)
+    this.glowIntensity = 0
+    this.glowPhase = 0
+
     // Network
     this.lastUpdate = Date.now()
     this.interpolate = true
@@ -79,6 +83,14 @@ class Player {
     // Update rotation to face movement direction
     if (this.velocityX !== 0 || this.velocityY !== 0) {
       this.rotation = Math.atan2(this.velocityY, this.velocityX)
+    }
+
+    // Update glow effect (when predicted)
+    if (this.hasPredicted) {
+      this.glowPhase += deltaTime * 3 // 3 Hz pulse
+      this.glowIntensity = 0.5 + Math.sin(this.glowPhase) * 0.3
+    } else {
+      this.glowIntensity = 0
     }
   }
 
