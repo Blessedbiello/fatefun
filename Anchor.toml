@@ -1,0 +1,48 @@
+[toolchain]
+anchor_version = "0.30.1"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+fate_arena = "FATEarenaBVy3Q8xPzRZYVHf8k3J7d5cKqX4mW9sPump"
+fate_council = "FATEcouncBVy3Q8xPzRZYVHf8k3J7d5cKqX4mW9sPump"
+
+[programs.devnet]
+fate_arena = "FATEarenaBVy3Q8xPzRZYVHf8k3J7d5cKqX4mW9sPump"
+fate_council = "FATEcouncBVy3Q8xPzRZYVHf8k3J7d5cKqX4mW9sPump"
+
+[programs.mainnet]
+fate_arena = "FATEarenaBVy3Q8xPzRZYVHf8k3J7d5cKqX4mW9sPump"
+fate_council = "FATEcouncBVy3Q8xPzRZYVHf8k3J7d5cKqX4mW9sPump"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "Localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
+[test]
+startup_wait = 5000
+
+[test.validator]
+url = "https://api.devnet.solana.com"
+
+[[test.validator.clone]]
+address = "HEvSKofvBgfaexv23kMabbYqxasxU3mQ6YHEqD1wxSXQ"
+
+[[test.validator.clone]]
+address = "SW1TCH7qEPTdLsDHRgPuMQjbQxKdH2aBStViMFnt64f"
+
+[[test.genesis]]
+address = "FATEarenaBVy3Q8xPzRZYVHf8k3J7d5cKqX4mW9sPump"
+program = "programs/fate-protocol/programs/fate_arena/target/deploy/fate_arena.so"
+
+[[test.genesis]]
+address = "FATEcouncBVy3Q8xPzRZYVHf8k3J7d5cKqX4mW9sPump"
+program = "programs/fate-protocol/programs/fate_council/target/deploy/fate_council.so"

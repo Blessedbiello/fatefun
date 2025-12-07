@@ -1,0 +1,43 @@
+{
+  "gameId": "fate-protocol-arena",
+  "gameName": "FATE Protocol Arena",
+  "version": "1.0.0",
+  "engine": "moddio",
+  "settings": {
+    "resolution": {
+      "width": 1920,
+      "height": 1080
+    },
+    "fps": 60,
+    "enablePhysics": true,
+    "enableMultiplayer": true,
+    "maxPlayers": 10
+  },
+  "scenes": [
+    {
+      "id": "lobby",
+      "name": "Lobby",
+      "file": "scenes/lobby.json"
+    },
+    {
+      "id": "arena",
+      "name": "Battle Arena",
+      "file": "scenes/arena.json"
+    },
+    {
+      "id": "results",
+      "name": "Results",
+      "file": "scenes/results.json"
+    }
+  ],
+  "assets": {
+    "sprites": "assets/sprites/",
+    "sounds": "assets/sounds/",
+    "music": "assets/music/"
+  },
+  "networking": {
+    "serverUrl": "${NEXT_PUBLIC_MODDIO_SERVER_URL}",
+    "apiKey": "${NEXT_PUBLIC_MODDIO_API_KEY}",
+    "region": "us-east-1"
+  }
+}

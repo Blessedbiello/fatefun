@@ -1,0 +1,37 @@
+{
+  "name": "fate-protocol",
+  "version": "1.0.0",
+  "description": "FATE Protocol - Real-time PvP Prediction Battle Game on Solana",
+  "private": true,
+  "workspaces": [
+    "app",
+    "programs/fate-protocol"
+  ],
+  "scripts": {
+    "dev": "concurrently \"yarn dev:anchor\" \"yarn dev:app\"",
+    "dev:anchor": "cd programs/fate-protocol && anchor build && anchor deploy",
+    "dev:app": "cd app && yarn dev",
+    "build": "yarn build:programs && yarn build:app",
+    "build:programs": "cd programs/fate-protocol && anchor build",
+    "build:app": "cd app && yarn build",
+    "test": "cd programs/fate-protocol && anchor test",
+    "test:app": "cd app && yarn test",
+    "deploy:devnet": "cd programs/fate-protocol && anchor deploy --provider.cluster devnet",
+    "deploy:mainnet": "cd programs/fate-protocol && anchor deploy --provider.cluster mainnet",
+    "localnet": "solana-test-validator",
+    "clean": "cd programs/fate-protocol && anchor clean && cd ../../app && rm -rf .next",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.55.0",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "yarn": ">=1.22.0"
+  }
+}

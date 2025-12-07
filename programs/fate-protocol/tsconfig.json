@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "types": ["mocha", "chai"],
+    "typeRoots": ["./node_modules/@types"],
+    "lib": ["es2015"],
+    "module": "commonjs",
+    "target": "es6",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "@fate-arena/*": ["./programs/fate_arena/src/*"],
+      "@fate-council/*": ["./programs/fate_council/src/*"]
+    }
+  },
+  "include": [
+    "programs/**/*",
+    "tests/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "target"
+  ]
+}
