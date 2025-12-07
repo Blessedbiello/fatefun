@@ -1,48 +1,46 @@
 use anchor_lang::prelude::*;
 
+/// CouncilConfig - Single instance PDA for council configuration
 #[account]
-pub struct Council {
-    /// Council authority
+pub struct CouncilConfig {
+    /// Council authority (can update config)
     pub authority: Pubkey,
 
-    /// Total proposals created
+    /// FATE Arena program ID (for CPI calls)
+    pub fate_arena_program: Pubkey,
+
+    /// SOL required to create a proposal
+    pub proposal_stake: u64,
+
+    /// Voting period duration (48 hours default = 172800 seconds)
+    pub voting_period: i64,
+
+    /// Total number of proposals created
     pub total_proposals: u64,
 
-    /// Active proposals count
-    pub active_proposals: u64,
+    /// Proposer bonus percentage (basis points, e.g., 200 = 2%)
+    pub proposer_bonus_bps: u16,
 
-    /// Total voting power
-    pub total_voting_power: u64,
-
-    /// Minimum voting power to create proposal
-    pub min_vote_threshold: u64,
-
-    /// Proposal duration in seconds
-    pub proposal_duration: i64,
-
-    /// Execution delay after approval
-    pub execution_delay: i64,
-
-    /// Quorum percentage (0-100)
-    pub quorum_percentage: u8,
-
-    /// Approval threshold percentage (0-100)
-    pub approval_threshold: u8,
-
-    /// Bump seed
+    /// Bump seed for PDA
     pub bump: u8,
 }
 
-impl Council {
+impl CouncilConfig {
     pub const LEN: usize = 8 + // discriminator
         32 + // authority
+        32 + // fate_arena_program
+        8 + // proposal_stake
+        8 + // voting_period
         8 + // total_proposals
-        8 + // active_proposals
-        8 + // total_voting_power
-        8 + // min_vote_threshold
-        8 + // proposal_duration
-        8 + // execution_delay
-        1 + // quorum_percentage
-        1 + // approval_threshold
+        2 + // proposer_bonus_bps
         1; // bump
+
+    /// Default voting period: 48 hours
+    pub const DEFAULT_VOTING_PERIOD: i64 = 48 * 60 * 60;
+
+    /// Default proposal stake: 1 SOL
+    pub const DEFAULT_PROPOSAL_STAKE: u64 = 1_000_000_000;
+
+    /// Default proposer bonus: 2%
+    pub const DEFAULT_PROPOSER_BONUS_BPS: u16 = 200;
 }

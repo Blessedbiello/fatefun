@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
-use crate::constants::*;
+use anchor_lang::system_program;
+use crate::constants::{seeds, BPS_DENOMINATOR};
 use crate::errors::*;
 use crate::state::*;
 
@@ -7,74 +8,126 @@ use crate::state::*;
 pub struct ExecuteProposal<'info> {
     #[account(
         mut,
-        seeds = [COUNCIL_SEED],
-        bump = council.bump
+        seeds = [seeds::COUNCIL_CONFIG],
+        bump = config.bump
     )]
-    pub council: Account<'info, Council>,
+    pub config: Account<'info, CouncilConfig>,
 
     #[account(
         mut,
-        seeds = [PROPOSAL_SEED, proposal.proposal_id.to_le_bytes().as_ref()],
+        seeds = [seeds::PROPOSAL, proposal.proposal_id.to_le_bytes().as_ref()],
         bump = proposal.bump,
-        constraint = proposal.state == ProposalState::Active @ FateCouncilError::ProposalNotActive
+        constraint = proposal.status == ProposalStatus::Passed @ ErrorCode::ProposalDidNotPass
     )]
     pub proposal: Account<'info, Proposal>,
 
+    /// CHECK: Vault holding proposal stake + liquidity
+    #[account(
+        mut,
+        seeds = [seeds::PROPOSAL_VAULT, proposal.key().as_ref()],
+        bump
+    )]
+    pub proposal_vault: AccountInfo<'info>,
+
+    /// The proposer who will receive refund + bonus
+    /// CHECK: Validated against proposal.proposer
+    #[account(
+        mut,
+        constraint = proposer.key() == proposal.proposer @ ErrorCode::Unauthorized
+    )]
+    pub proposer: AccountInfo<'info>,
+
+    /// CHECK: FATE Arena program for CPI
+    #[account(
+        constraint = fate_arena_program.key() == config.fate_arena_program
+    )]
+    pub fate_arena_program: AccountInfo<'info>,
+
+    /// Remaining accounts:
+    /// [0] = arena_config (for fate_arena)
+    /// [1] = market (to be created)
+    /// [2] = system_program
+    /// etc. (all accounts needed for fate_arena::create_market CPI)
+
     pub executor: Signer<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 pub fn handler(ctx: Context<ExecuteProposal>) -> Result<()> {
     let proposal = &mut ctx.accounts.proposal;
-    let council = &mut ctx.accounts.council;
+    let config = &ctx.accounts.config;
     let clock = Clock::get()?;
 
-    // Check voting period ended
+    // Ensure proposal hasn't been executed yet
     require!(
-        clock.unix_timestamp > proposal.end_time,
-        FateCouncilError::VotingPeriodNotEnded
+        proposal.executed_at.is_none(),
+        ErrorCode::ProposalAlreadyExecuted
     );
 
-    // Check execution delay
-    require!(
-        clock.unix_timestamp >= proposal.end_time + council.execution_delay,
-        FateCouncilError::ExecutionDelayNotMet
-    );
+    // Calculate proposer bonus
+    let total_liquidity = proposal.total_liquidity();
+    let proposer_bonus = (total_liquidity as u128 * config.proposer_bonus_bps as u128 / BPS_DENOMINATOR as u128) as u64;
+    let proposer_total = config.proposal_stake.checked_add(proposer_bonus)
+        .ok_or(ErrorCode::ArithmeticOverflow)?;
 
-    // Calculate quorum
-    let quorum = council.total_voting_power
-        .checked_mul(council.quorum_percentage as u64)
-        .unwrap()
-        .checked_div(100)
-        .unwrap();
+    // Transfer refund + bonus to proposer
+    let vault_key = proposal.key();
+    let vault_bump = ctx.bumps.proposal_vault;
+    let vault_seeds = &[
+        seeds::PROPOSAL_VAULT,
+        vault_key.as_ref(),
+        &[vault_bump],
+    ];
+    let signer_seeds = &[&vault_seeds[..]];
 
-    require!(
-        proposal.total_votes >= quorum,
-        FateCouncilError::QuorumNotReached
-    );
+    system_program::transfer(
+        CpiContext::new_with_signer(
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: ctx.accounts.proposal_vault.to_account_info(),
+                to: ctx.accounts.proposer.to_account_info(),
+            },
+            signer_seeds,
+        ),
+        proposer_total,
+    )?;
 
-    // Check approval threshold
-    let approval_percentage = if proposal.total_votes > 0 {
-        (proposal.votes_for * 100) / proposal.total_votes
-    } else {
-        0
-    };
+    // TODO: Execute CPI to fate_arena::create_market
+    // This would require importing the fate_arena crate and using CpiContext
+    // For now, we'll log the parameters that would be passed
 
-    if approval_percentage >= council.approval_threshold as u64 {
-        proposal.state = ProposalState::Succeeded;
+    // Extract market name from fixed array
+    let market_name = String::from_utf8_lossy(&proposal.market_name)
+        .trim_end_matches('\0')
+        .to_string();
 
-        // Execute proposal logic here based on proposal_type
-        // This would interact with other programs/accounts
+    msg!("CPI to fate_arena::create_market would be called here");
+    msg!("Market name: {}", market_name);
+    msg!("Pyth feed: {}", proposal.pyth_price_feed);
 
-        proposal.state = ProposalState::Executed;
-        proposal.executed_at = clock.unix_timestamp;
+    // Mark as executed
+    proposal.status = ProposalStatus::Executed;
+    proposal.executed_at = Some(clock.unix_timestamp);
 
-        msg!("Proposal {} executed", proposal.proposal_id);
-    } else {
-        proposal.state = ProposalState::Defeated;
-        msg!("Proposal {} defeated", proposal.proposal_id);
-    }
+    emit!(ProposalExecuted {
+        proposal_id: proposal.proposal_id,
+        proposer: proposal.proposer,
+        market_name,
+        proposer_bonus,
+        executed_at: clock.unix_timestamp,
+    });
 
-    council.active_proposals = council.active_proposals.saturating_sub(1);
+    msg!("Proposal {} executed successfully", proposal.proposal_id);
+    msg!("Proposer received {} lamports (stake + bonus)", proposer_total);
 
     Ok(())
+}
+
+#[event]
+pub struct ProposalExecuted {
+    pub proposal_id: u64,
+    pub proposer: Pubkey,
+    pub market_name: String,
+    pub proposer_bonus: u64,
+    pub executed_at: i64,
 }

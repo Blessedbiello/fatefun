@@ -1,17 +1,16 @@
 use anchor_lang::prelude::*;
 
-#[constant]
-pub const COUNCIL_SEED: &[u8] = b"council";
+/// PDA Seeds
+pub mod seeds {
+    pub const COUNCIL_CONFIG: &[u8] = b"council_config";
+    pub const PROPOSAL: &[u8] = b"proposal";
+    pub const PROPOSAL_VOTE: &[u8] = b"proposal_vote";
+    pub const PROPOSAL_VAULT: &[u8] = b"proposal_vault";
+}
 
-#[constant]
-pub const PROPOSAL_SEED: &[u8] = b"proposal";
+/// Futarchy parameters
+pub const MIN_TRADE_AMOUNT: u64 = 10_000_000; // 0.01 SOL minimum trade
+pub const MAX_TRADE_AMOUNT: u64 = 100_000_000_000; // 100 SOL maximum trade
 
-#[constant]
-pub const VOTE_SEED: &[u8] = b"vote";
-
-// Governance parameters
-pub const MIN_VOTE_THRESHOLD: u64 = 100_000_000; // 0.1 SOL in voting power
-pub const PROPOSAL_DURATION: i64 = 604800; // 7 days
-pub const EXECUTION_DELAY: i64 = 86400; // 1 day
-pub const QUORUM_PERCENTAGE: u8 = 10; // 10% of total voting power
-pub const APPROVAL_THRESHOLD: u8 = 60; // 60% approval needed
+/// Basis points (10000 = 100%)
+pub const BPS_DENOMINATOR: u64 = 10_000;

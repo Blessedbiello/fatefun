@@ -1,40 +1,52 @@
 use anchor_lang::prelude::*;
 
 #[error_code]
-pub enum FateCouncilError {
-    #[msg("Insufficient voting power")]
-    InsufficientVotingPower,
-
+pub enum ErrorCode {
     #[msg("Proposal is not active")]
     ProposalNotActive,
+
+    #[msg("Voting period has not ended yet")]
+    VotingPeriodNotEnded,
+
+    #[msg("Voting period has already ended")]
+    VotingPeriodEnded,
 
     #[msg("Proposal has already been executed")]
     ProposalAlreadyExecuted,
 
-    #[msg("Voting period has ended")]
-    VotingPeriodEnded,
+    #[msg("Proposal did not pass")]
+    ProposalDidNotPass,
 
-    #[msg("Voting period has not ended")]
-    VotingPeriodNotEnded,
+    #[msg("Proposal has not been resolved yet")]
+    ProposalNotResolved,
 
-    #[msg("Already voted on this proposal")]
-    AlreadyVoted,
+    #[msg("Trade amount below minimum")]
+    TradeAmountTooSmall,
 
-    #[msg("Proposal did not reach quorum")]
-    QuorumNotReached,
+    #[msg("Trade amount above maximum")]
+    TradeAmountTooLarge,
 
-    #[msg("Proposal was not approved")]
-    ProposalNotApproved,
+    #[msg("Winnings already claimed")]
+    AlreadyClaimed,
 
-    #[msg("Execution delay not met")]
-    ExecutionDelayNotMet,
+    #[msg("No winnings to claim")]
+    NoWinnings,
 
-    #[msg("Unauthorized action")]
+    #[msg("Unauthorized")]
     Unauthorized,
 
-    #[msg("Invalid proposal type")]
-    InvalidProposalType,
+    #[msg("Invalid market name length")]
+    InvalidMarketName,
 
-    #[msg("Math overflow")]
-    MathOverflow,
+    #[msg("Invalid market description length")]
+    InvalidMarketDescription,
+
+    #[msg("Arithmetic overflow")]
+    ArithmeticOverflow,
+
+    #[msg("Insufficient liquidity in pool")]
+    InsufficientLiquidity,
+
+    #[msg("Cannot cancel proposal after voting has started")]
+    CannotCancelAfterVotingStarted,
 }
