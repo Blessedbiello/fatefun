@@ -1,37 +1,51 @@
 use anchor_lang::prelude::*;
-use crate::constants::*;
-use crate::errors::*;
-use crate::state::*;
+use crate::{
+    GameConfig, Match, MatchStatus, ErrorCode, seeds
+};
 
 #[derive(Accounts)]
 pub struct CancelMatch<'info> {
     #[account(
-        mut,
-        seeds = [ARENA_SEED],
-        bump = arena.bump
+        seeds = [seeds::GAME_CONFIG],
+        bump = config.bump
     )]
-    pub arena: Account<'info, Arena>,
+    pub config: Account<'info, GameConfig>,
 
     #[account(
         mut,
-        seeds = [MATCH_SEED, match_account.match_id.to_le_bytes().as_ref()],
+        seeds = [seeds::MATCH, match_account.match_id.to_le_bytes().as_ref()],
         bump = match_account.bump,
-        constraint = match_account.state == MatchState::Pending @ FateArenaError::CannotCancelStartedMatch,
-        constraint = authority.key() == match_account.creator @ FateArenaError::Unauthorized
+        constraint = match_account.status == MatchStatus::Open @ ErrorCode::InvalidMatchStatus
     )]
     pub match_account: Account<'info, Match>,
 
+    #[account(
+        constraint = authority.key() == match_account.creator ||
+                     authority.key() == config.authority @ ErrorCode::Unauthorized
+    )]
     pub authority: Signer<'info>,
 }
 
 pub fn handler(ctx: Context<CancelMatch>) -> Result<()> {
     let match_account = &mut ctx.accounts.match_account;
-    let arena = &mut ctx.accounts.arena;
 
-    match_account.state = MatchState::Cancelled;
-    arena.active_matches = arena.active_matches.saturating_sub(1);
+    // Update status
+    match_account.status = MatchStatus::Cancelled;
+    match_account.resolved_at = Some(Clock::get()?.unix_timestamp);
 
-    msg!("Match {} cancelled", match_account.match_id);
+    emit!(MatchCancelled {
+        match_id: match_account.match_id,
+        cancelled_by: ctx.accounts.authority.key(),
+    });
+
+    // Note: Players need to call a separate refund instruction
+    // or we handle refunds in claim_winnings for cancelled matches
 
     Ok(())
+}
+
+#[event]
+pub struct MatchCancelled {
+    pub match_id: u64,
+    pub cancelled_by: Pubkey,
 }

@@ -1,96 +1,203 @@
 use anchor_lang::prelude::*;
-use crate::constants::*;
-use crate::errors::*;
-use crate::state::*;
+use anchor_lang::system_program;
+use crate::{
+    GameConfig, Market, Match, PlayerEntry, UserProfile,
+    MatchType, MatchStatus, ErrorCode, seeds, constants::*
+};
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct CreateMatchParams {
-    pub market_type: MarketType,
-    pub asset_symbol: [u8; 16],
+    pub match_type: MatchType,
     pub entry_fee: u64,
     pub max_players: u8,
-    pub duration: i64,
-    pub target_price: Option<i64>,
-    pub range_min: Option<i64>,
-    pub range_max: Option<i64>,
+    pub prediction_window: i64,
+    pub match_duration: i64,
 }
 
 #[derive(Accounts)]
 pub struct CreateMatch<'info> {
     #[account(
         mut,
-        seeds = [ARENA_SEED],
-        bump = arena.bump
+        seeds = [seeds::GAME_CONFIG],
+        bump = config.bump,
+        constraint = !config.paused @ ErrorCode::GamePaused
     )]
-    pub arena: Account<'info, Arena>,
+    pub config: Account<'info, GameConfig>,
+
+    #[account(
+        mut,
+        seeds = [seeds::MARKET, market.market_id.to_le_bytes().as_ref()],
+        bump = market.bump,
+        constraint = market.active @ ErrorCode::MarketNotActive
+    )]
+    pub market: Account<'info, Market>,
 
     #[account(
         init,
         payer = creator,
         space = Match::LEN,
-        seeds = [MATCH_SEED, arena.total_matches.to_le_bytes().as_ref()],
+        seeds = [seeds::MATCH, config.total_matches.to_le_bytes().as_ref()],
         bump
     )]
     pub match_account: Account<'info, Match>,
 
+    #[account(
+        init,
+        payer = creator,
+        space = PlayerEntry::LEN,
+        seeds = [
+            seeds::PLAYER_ENTRY,
+            match_account.key().as_ref(),
+            creator.key().as_ref()
+        ],
+        bump
+    )]
+    pub player_entry: Account<'info, PlayerEntry>,
+
+    #[account(
+        init_if_needed,
+        payer = creator,
+        space = UserProfile::LEN,
+        seeds = [seeds::USER_PROFILE, creator.key().as_ref()],
+        bump
+    )]
+    pub user_profile: Account<'info, UserProfile>,
+
+    /// CHECK: Match escrow vault
+    #[account(
+        mut,
+        seeds = [seeds::VAULT, match_account.key().as_ref()],
+        bump
+    )]
+    pub vault: AccountInfo<'info>,
+
     #[account(mut)]
     pub creator: Signer<'info>,
-
-    /// CHECK: Pyth price feed account
-    pub price_feed: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,
 }
 
 pub fn handler(ctx: Context<CreateMatch>, params: CreateMatchParams) -> Result<()> {
-    let arena = &mut ctx.accounts.arena;
+    let config = &mut ctx.accounts.config;
+    let market = &mut ctx.accounts.market;
     let match_account = &mut ctx.accounts.match_account;
+    let player_entry = &mut ctx.accounts.player_entry;
+    let user_profile = &mut ctx.accounts.user_profile;
+    let clock = Clock::get()?;
 
     // Validate parameters
     require!(
-        params.entry_fee >= arena.min_bet && params.entry_fee <= arena.max_bet,
-        FateArenaError::InvalidBetAmount
+        params.entry_fee >= MIN_ENTRY_FEE && params.entry_fee <= MAX_ENTRY_FEE,
+        ErrorCode::InvalidEntryFee
     );
     require!(
-        params.max_players >= MIN_PLAYERS && params.max_players <= MAX_PLAYERS,
-        FateArenaError::InvalidMatchDuration
+        params.max_players >= 2 && params.max_players <= MAX_PLAYERS,
+        ErrorCode::InvalidMaxPlayers
     );
     require!(
-        params.duration >= 60 && params.duration <= 3600,
-        FateArenaError::InvalidMatchDuration
+        params.prediction_window >= MIN_PREDICTION_WINDOW &&
+        params.prediction_window <= MAX_PREDICTION_WINDOW,
+        ErrorCode::InvalidPredictionWindow
+    );
+    require!(
+        params.match_duration >= MIN_MATCH_DURATION &&
+        params.match_duration <= MAX_MATCH_DURATION,
+        ErrorCode::InvalidPredictionWindow
     );
 
-    let match_id = arena.total_matches;
+    // Validate match type
+    if params.match_type == MatchType::BattleRoyale {
+        require!(
+            params.max_players >= MIN_BATTLE_ROYALE_PLAYERS,
+            ErrorCode::InvalidMaxPlayers
+        );
+    }
+
+    let match_id = config.total_matches;
 
     // Initialize match
     match_account.match_id = match_id;
+    match_account.market = market.key();
     match_account.creator = ctx.accounts.creator.key();
-    match_account.state = MatchState::Pending;
-    match_account.market_type = params.market_type;
-    match_account.price_feed = ctx.accounts.price_feed.key();
-    match_account.asset_symbol = params.asset_symbol;
-    match_account.entry_price = 0;
-    match_account.exit_price = 0;
-    match_account.target_price = params.target_price.unwrap_or(0);
-    match_account.range_min = params.range_min.unwrap_or(0);
-    match_account.range_max = params.range_max.unwrap_or(0);
+    match_account.match_type = params.match_type;
     match_account.entry_fee = params.entry_fee;
-    match_account.prize_pool = 0;
-    match_account.player_count = 0;
     match_account.max_players = params.max_players;
-    match_account.start_time = 0;
-    match_account.end_time = 0;
-    match_account.duration = params.duration;
-    match_account.winning_outcome = None;
-    match_account.winner_count = 0;
-    match_account.resolved_at = 0;
+    match_account.current_players = 1; // Creator joins
+    match_account.status = MatchStatus::Open;
+    match_account.start_price = None;
+    match_account.end_price = None;
+    match_account.prediction_window = params.prediction_window;
+    match_account.resolution_time = clock.unix_timestamp + params.prediction_window + params.match_duration;
+    match_account.winning_side = None;
+    match_account.total_pot = params.entry_fee;
+    match_account.created_at = clock.unix_timestamp;
+    match_account.started_at = None;
+    match_account.resolved_at = None;
     match_account.bump = ctx.bumps.match_account;
 
-    // Update arena stats
-    arena.total_matches = arena.total_matches.checked_add(1).unwrap();
-    arena.active_matches = arena.active_matches.checked_add(1).unwrap();
+    // Initialize player entry for creator
+    player_entry.match_account = match_account.key();
+    player_entry.player = ctx.accounts.creator.key();
+    player_entry.prediction = None;
+    player_entry.amount_staked = params.entry_fee;
+    player_entry.prediction_locked_at = None;
+    player_entry.claimed = false;
+    player_entry.winnings = 0;
+    player_entry.bump = ctx.bumps.player_entry;
 
-    msg!("Match {} created by {}", match_id, ctx.accounts.creator.key());
+    // Initialize user profile if new
+    if user_profile.total_matches == 0 {
+        user_profile.user = ctx.accounts.creator.key();
+        user_profile.username = None;
+        user_profile.total_matches = 0;
+        user_profile.wins = 0;
+        user_profile.losses = 0;
+        user_profile.total_wagered = 0;
+        user_profile.total_won = 0;
+        user_profile.current_streak = 0;
+        user_profile.best_streak = 0;
+        user_profile.xp = 0;
+        user_profile.level = 1;
+        user_profile.created_at = clock.unix_timestamp;
+        user_profile.bump = ctx.bumps.user_profile;
+    }
+
+    // Transfer entry fee to vault
+    system_program::transfer(
+        CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: ctx.accounts.creator.to_account_info(),
+                to: ctx.accounts.vault.to_account_info(),
+            },
+        ),
+        params.entry_fee,
+    )?;
+
+    // Update counters
+    config.total_matches = config.total_matches.checked_add(1)
+        .ok_or(ErrorCode::ArithmeticOverflow)?;
+    market.total_matches = market.total_matches.checked_add(1)
+        .ok_or(ErrorCode::ArithmeticOverflow)?;
+
+    emit!(MatchCreated {
+        match_id,
+        market: market.key(),
+        creator: ctx.accounts.creator.key(),
+        match_type: params.match_type,
+        entry_fee: params.entry_fee,
+        max_players: params.max_players,
+    });
 
     Ok(())
+}
+
+#[event]
+pub struct MatchCreated {
+    pub match_id: u64,
+    pub market: Pubkey,
+    pub creator: Pubkey,
+    pub match_type: MatchType,
+    pub entry_fee: u64,
+    pub max_players: u8,
 }
