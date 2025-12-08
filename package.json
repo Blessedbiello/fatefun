@@ -8,26 +8,54 @@
     "programs/fate-protocol"
   ],
   "scripts": {
-    "dev": "concurrently \"yarn dev:anchor\" \"yarn dev:app\"",
-    "dev:anchor": "cd programs/fate-protocol && anchor build && anchor deploy",
-    "dev:app": "cd app && yarn dev",
-    "build": "yarn build:programs && yarn build:app",
-    "build:programs": "cd programs/fate-protocol && anchor build",
-    "build:app": "cd app && yarn build",
-    "test": "cd programs/fate-protocol && anchor test",
-    "test:app": "cd app && yarn test",
-    "deploy:devnet": "cd programs/fate-protocol && anchor deploy --provider.cluster devnet",
-    "deploy:mainnet": "cd programs/fate-protocol && anchor deploy --provider.cluster mainnet",
-    "localnet": "solana-test-validator",
-    "clean": "cd programs/fate-protocol && anchor clean && cd ../../app && rm -rf .next",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
-    "lint": "eslint . --ext .ts,.tsx,.js,.jsx"
+    "test": "anchor test",
+    "test:arena": "cd programs/fate_arena && anchor test",
+    "test:council": "cd programs/fate_council && anchor test",
+    "test:integration": "ts-node tests/integration.test.ts",
+    "test:all": "npm run test:arena && npm run test:council && npm run test:integration",
+
+    "build": "anchor build",
+    "build:verify": "anchor build --verifiable",
+
+    "deploy:devnet": "NETWORK=devnet ts-node scripts/deploy.ts",
+    "deploy:mainnet": "NETWORK=mainnet ts-node scripts/deploy.ts",
+
+    "setup:devnet": "ts-node scripts/setup-devnet.ts",
+
+    "monitor:devnet": "NEXT_PUBLIC_SOLANA_NETWORK=devnet ts-node scripts/monitor.ts",
+    "monitor:mainnet": "NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta ts-node scripts/monitor.ts",
+
+    "dev": "next dev",
+    "build:frontend": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+
+    "localnet": "solana-test-validator --reset --quiet",
+    "logs": "solana logs",
+    "airdrop": "solana airdrop 2",
+    "balance": "solana balance",
+
+    "vercel:deploy": "vercel --prod",
+    "vercel:preview": "vercel",
+
+    "clean": "anchor clean && rm -rf .next node_modules",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\""
   },
   "devDependencies": {
+    "@coral-xyz/anchor": "^0.29.0",
+    "@solana/web3.js": "^1.87.6",
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
     "@types/node": "^20.10.0",
+    "axios": "^1.6.5",
+    "chai": "^4.3.10",
     "concurrently": "^8.2.2",
     "eslint": "^8.55.0",
+    "mocha": "^10.2.0",
     "prettier": "^3.1.0",
+    "ts-mocha": "^10.0.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   },
   "engines": {
