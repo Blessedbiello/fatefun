@@ -1,0 +1,47 @@
+{
+  "description": "Add these scripts to package.json",
+  "scripts": {
+    "test": "anchor test",
+    "test:arena": "cd programs/fate_arena && anchor test",
+    "test:council": "cd programs/fate_council && anchor test",
+    "test:integration": "ts-node tests/integration.test.ts",
+    "test:all": "npm run test:arena && npm run test:council && npm run test:integration",
+
+    "build": "anchor build",
+    "build:verify": "anchor build --verifiable",
+
+    "deploy:devnet": "NETWORK=devnet ts-node scripts/deploy.ts",
+    "deploy:mainnet": "NETWORK=mainnet ts-node scripts/deploy.ts",
+
+    "setup:devnet": "ts-node scripts/setup-devnet.ts",
+
+    "monitor:devnet": "NEXT_PUBLIC_SOLANA_NETWORK=devnet ts-node scripts/monitor.ts",
+    "monitor:mainnet": "NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta ts-node scripts/monitor.ts",
+
+    "dev": "next dev",
+    "build:frontend": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+
+    "localnet": "solana-test-validator --reset --quiet",
+    "logs": "solana logs",
+    "airdrop": "solana airdrop 2",
+    "balance": "solana balance",
+
+    "vercel:deploy": "vercel --prod",
+    "vercel:preview": "vercel"
+  },
+  "devDependencies": {
+    "@coral-xyz/anchor": "^0.29.0",
+    "@solana/web3.js": "^1.87.6",
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "chai": "^4.3.10",
+    "mocha": "^10.2.0",
+    "ts-mocha": "^10.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "axios": "^1.6.5"
+  }
+}
