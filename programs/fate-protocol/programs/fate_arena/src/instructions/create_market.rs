@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
 use crate::{GameConfig, Market, ErrorCode, seeds};
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
@@ -51,14 +50,9 @@ pub fn handler(ctx: Context<CreateMarket>, params: CreateMarketParams) -> Result
         ErrorCode::InvalidMarketDescription
     );
 
-    // Validate Pyth account by attempting to deserialize
-    let price_update = PriceUpdateV2::try_deserialize(
-        &mut ctx.accounts.pyth_price_feed.data.borrow().as_ref()
-    );
-    require!(
-        price_update.is_ok(),
-        ErrorCode::InvalidPythAccount
-    );
+    // Validate Pyth account using utility function
+    use crate::utils::pyth::validate_price_feed;
+    validate_price_feed(&ctx.accounts.pyth_price_feed, "")?;
 
     let market_id = config.total_matches;
 

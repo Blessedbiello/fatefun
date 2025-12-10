@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use crate::constants::seeds;
-use crate::errors::*;
+use crate::errors::ErrorCode as CouncilError;
 use crate::state::*;
 
 #[derive(Accounts)]
@@ -10,8 +10,8 @@ pub struct CancelProposal<'info> {
         mut,
         seeds = [seeds::PROPOSAL, proposal.proposal_id.to_le_bytes().as_ref()],
         bump = proposal.bump,
-        constraint = proposal.status == ProposalStatus::Active @ ErrorCode::ProposalNotActive,
-        constraint = proposer.key() == proposal.proposer @ ErrorCode::Unauthorized
+        constraint = proposal.status == ProposalStatus::Active @ CouncilError::ProposalNotActive,
+        constraint = proposer.key() == proposal.proposer @ CouncilError::Unauthorized
     )]
     pub proposal: Account<'info, Proposal>,
 
@@ -35,7 +35,7 @@ pub fn handler(ctx: Context<CancelProposal>) -> Result<()> {
     // Can only cancel if no one has traded yet
     require!(
         proposal.pass_pool == 0 && proposal.fail_pool == 0,
-        ErrorCode::CannotCancelAfterVotingStarted
+        CouncilError::CannotCancelAfterVotingStarted
     );
 
     // Refund stake to proposer

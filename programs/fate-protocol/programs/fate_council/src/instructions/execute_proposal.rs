@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use crate::constants::{seeds, BPS_DENOMINATOR};
-use crate::errors::*;
+use crate::errors::ErrorCode as CouncilError;
 use crate::state::*;
 
 #[derive(Accounts)]
@@ -17,7 +17,7 @@ pub struct ExecuteProposal<'info> {
         mut,
         seeds = [seeds::PROPOSAL, proposal.proposal_id.to_le_bytes().as_ref()],
         bump = proposal.bump,
-        constraint = proposal.status == ProposalStatus::Passed @ ErrorCode::ProposalDidNotPass
+        constraint = proposal.status == ProposalStatus::Passed @ CouncilError::ProposalDidNotPass
     )]
     pub proposal: Account<'info, Proposal>,
 
@@ -33,7 +33,7 @@ pub struct ExecuteProposal<'info> {
     /// CHECK: Validated against proposal.proposer
     #[account(
         mut,
-        constraint = proposer.key() == proposal.proposer @ ErrorCode::Unauthorized
+        constraint = proposer.key() == proposal.proposer @ CouncilError::Unauthorized
     )]
     pub proposer: AccountInfo<'info>,
 
@@ -61,14 +61,14 @@ pub fn handler(ctx: Context<ExecuteProposal>) -> Result<()> {
     // Ensure proposal hasn't been executed yet
     require!(
         proposal.executed_at.is_none(),
-        ErrorCode::ProposalAlreadyExecuted
+        CouncilError::ProposalAlreadyExecuted
     );
 
     // Calculate proposer bonus
     let total_liquidity = proposal.total_liquidity();
     let proposer_bonus = (total_liquidity as u128 * config.proposer_bonus_bps as u128 / BPS_DENOMINATOR as u128) as u64;
     let proposer_total = config.proposal_stake.checked_add(proposer_bonus)
-        .ok_or(ErrorCode::ArithmeticOverflow)?;
+        .ok_or(CouncilError::ArithmeticOverflow)?;
 
     // Transfer refund + bonus to proposer
     let vault_key = proposal.key();

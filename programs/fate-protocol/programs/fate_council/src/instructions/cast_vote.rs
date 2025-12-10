@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use crate::constants::{seeds, MIN_TRADE_AMOUNT, MAX_TRADE_AMOUNT};
-use crate::errors::*;
+use crate::errors::ErrorCode as CouncilError;
 use crate::state::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
@@ -22,7 +22,7 @@ pub struct TradeOutcome<'info> {
         mut,
         seeds = [seeds::PROPOSAL, proposal.proposal_id.to_le_bytes().as_ref()],
         bump = proposal.bump,
-        constraint = proposal.status == ProposalStatus::Active @ ErrorCode::ProposalNotActive
+        constraint = proposal.status == ProposalStatus::Active @ CouncilError::ProposalNotActive
     )]
     pub proposal: Account<'info, Proposal>,
 
@@ -57,17 +57,17 @@ pub fn handler(ctx: Context<TradeOutcome>, params: TradeOutcomeParams) -> Result
     // Validate voting period is active
     require!(
         clock.unix_timestamp < proposal.voting_ends_at,
-        ErrorCode::VotingPeriodEnded
+        CouncilError::VotingPeriodEnded
     );
 
     // Validate trade amount
     require!(
         params.amount >= MIN_TRADE_AMOUNT,
-        ErrorCode::TradeAmountTooSmall
+        CouncilError::TradeAmountTooSmall
     );
     require!(
         params.amount <= MAX_TRADE_AMOUNT,
-        ErrorCode::TradeAmountTooLarge
+        CouncilError::TradeAmountTooLarge
     );
 
     // Transfer SOL to vault
@@ -96,15 +96,15 @@ pub fn handler(ctx: Context<TradeOutcome>, params: TradeOutcomeParams) -> Result
     match params.outcome {
         OutcomeSide::Pass => {
             proposal.pass_pool = proposal.pass_pool.checked_add(params.amount)
-                .ok_or(ErrorCode::ArithmeticOverflow)?;
+                .ok_or(CouncilError::ArithmeticOverflow)?;
             proposal_vote.pass_amount = proposal_vote.pass_amount.checked_add(params.amount)
-                .ok_or(ErrorCode::ArithmeticOverflow)?;
+                .ok_or(CouncilError::ArithmeticOverflow)?;
         }
         OutcomeSide::Fail => {
             proposal.fail_pool = proposal.fail_pool.checked_add(params.amount)
-                .ok_or(ErrorCode::ArithmeticOverflow)?;
+                .ok_or(CouncilError::ArithmeticOverflow)?;
             proposal_vote.fail_amount = proposal_vote.fail_amount.checked_add(params.amount)
-                .ok_or(ErrorCode::ArithmeticOverflow)?;
+                .ok_or(CouncilError::ArithmeticOverflow)?;
         }
     }
 

@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use crate::constants::seeds;
-use crate::errors::*;
+use crate::errors::ErrorCode as CouncilError;
 use crate::state::*;
 
 #[derive(Accounts)]
@@ -9,7 +9,7 @@ pub struct ResolveProposal<'info> {
         mut,
         seeds = [seeds::PROPOSAL, proposal.proposal_id.to_le_bytes().as_ref()],
         bump = proposal.bump,
-        constraint = proposal.status == ProposalStatus::Active @ ErrorCode::ProposalNotActive
+        constraint = proposal.status == ProposalStatus::Active @ CouncilError::ProposalNotActive
     )]
     pub proposal: Account<'info, Proposal>,
 
@@ -24,7 +24,7 @@ pub fn handler(ctx: Context<ResolveProposal>) -> Result<()> {
     // Ensure voting period has ended
     require!(
         clock.unix_timestamp >= proposal.voting_ends_at,
-        ErrorCode::VotingPeriodNotEnded
+        CouncilError::VotingPeriodNotEnded
     );
 
     // Determine outcome based on price signal

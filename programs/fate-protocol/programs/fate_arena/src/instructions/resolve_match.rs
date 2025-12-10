@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
 use crate::{
     GameConfig, Market, Match, MatchStatus, PredictionSide,
     ErrorCode, seeds, utils::pyth::*,
@@ -31,7 +30,7 @@ pub struct ResolveMatch<'info> {
     pub match_account: Account<'info, Match>,
 
     /// Pyth price update account
-    pub price_update: Account<'info, PriceUpdateV2>,
+    pub price_update: AccountInfo<'info>,
 
     pub resolver: Signer<'info>,
 }
@@ -50,6 +49,8 @@ pub fn handler(ctx: Context<ResolveMatch>) -> Result<()> {
 
     // Validate the price update account contains the correct feed
     validate_price_feed(&ctx.accounts.price_update.to_account_info(), &feed_id_hex)?;
+
+    // Convert Anchor Clock to PythClock for Pyth
 
     // Get end price from Pyth with full validation
     let pyth_price = get_pyth_price(

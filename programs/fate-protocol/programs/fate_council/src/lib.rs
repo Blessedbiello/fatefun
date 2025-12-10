@@ -10,7 +10,7 @@ pub use constants::*;
 pub use errors::*;
 pub use state::*;
 
-declare_id!("FATEcouncBVy3Q8xPzRZYVHf8k3J7d5cKqX4mW9sPump");
+declare_id!("DnseM3GuRFjz5SxgRMpWGeSubkZZu8TxNrpQYTZVnFvZ");
 
 #[program]
 pub mod fate_council {

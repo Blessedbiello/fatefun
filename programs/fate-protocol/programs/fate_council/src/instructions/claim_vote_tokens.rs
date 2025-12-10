@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use crate::constants::seeds;
-use crate::errors::*;
+use crate::errors::ErrorCode as CouncilError;
 use crate::state::*;
 
 #[derive(Accounts)]
@@ -10,7 +10,7 @@ pub struct ClaimVoteTokens<'info> {
         mut,
         seeds = [seeds::PROPOSAL, proposal.proposal_id.to_le_bytes().as_ref()],
         bump = proposal.bump,
-        constraint = proposal.status == ProposalStatus::Passed || proposal.status == ProposalStatus::Rejected @ ErrorCode::ProposalNotResolved
+        constraint = proposal.status == ProposalStatus::Passed || proposal.status == ProposalStatus::Rejected @ CouncilError::ProposalNotResolved
     )]
     pub proposal: Account<'info, Proposal>,
 
@@ -18,7 +18,7 @@ pub struct ClaimVoteTokens<'info> {
         mut,
         seeds = [seeds::PROPOSAL_VOTE, proposal.key().as_ref(), voter.key().as_ref()],
         bump = proposal_vote.bump,
-        constraint = !proposal_vote.claimed @ ErrorCode::AlreadyClaimed
+        constraint = !proposal_vote.claimed @ CouncilError::AlreadyClaimed
     )]
     pub proposal_vote: Account<'info, ProposalVote>,
 
@@ -65,7 +65,7 @@ pub fn handler(ctx: Context<ClaimVoteTokens>) -> Result<()> {
     // Winners split the losing pool proportionally to their stake
     // payout = winner_stake + (winner_stake / total_winning_pool * losing_pool)
 
-    require!(winner_amount > 0, ErrorCode::NoWinnings);
+    require!(winner_amount > 0, CouncilError::NoWinnings);
 
     let share_of_winning_pool = if winning_pool > 0 {
         (winner_amount as u128 * losing_pool as u128 / winning_pool as u128) as u64
@@ -74,7 +74,7 @@ pub fn handler(ctx: Context<ClaimVoteTokens>) -> Result<()> {
     };
 
     let total_payout = winner_amount.checked_add(share_of_winning_pool)
-        .ok_or(ErrorCode::ArithmeticOverflow)?;
+        .ok_or(CouncilError::ArithmeticOverflow)?;
 
     // Transfer winnings
     let vault_key = proposal.key();

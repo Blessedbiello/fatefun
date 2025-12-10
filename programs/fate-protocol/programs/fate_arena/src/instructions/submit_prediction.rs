@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
 use crate::{
     Market, Match, PlayerEntry, MatchStatus, PredictionSide,
     ErrorCode, seeds, utils::pyth::*,
@@ -41,7 +40,7 @@ pub struct SubmitPrediction<'info> {
     pub player_entry: Account<'info, PlayerEntry>,
 
     /// Pyth price update account
-    pub price_update: Account<'info, PriceUpdateV2>,
+    pub price_update: AccountInfo<'info>,
 
     pub player: Signer<'info>,
 }
@@ -67,6 +66,7 @@ pub fn handler(ctx: Context<SubmitPrediction>, params: SubmitPredictionParams) -
 
     // If this is the first prediction and match hasn't started, record start price
     if match_account.start_price.is_none() && match_account.status == MatchStatus::Open {
+
         // Get current price from Pyth
         let pyth_price = get_pyth_price(
             &ctx.accounts.price_update,

@@ -1,0 +1,20 @@
+{
+  "network": "devnet",
+  "timestamp": "2025-12-10T00:56:00.000Z",
+  "programs": {
+    "arena": "HRF68UNqq3ASruJFacsBhV7iQyfLF697FhjPCfLNXQxa",
+    "council": "DnseM3GuRFjz5SxgRMpWGeSubkZZu8TxNrpQYTZVnFvZ"
+  },
+  "pythFeeds": {
+    "devnet": {
+      "SOL/USD": "J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix",
+      "BTC/USD": "HovQMDrbAgAYPCmHVSrezcSmkMtXSSUsLDFANExrZh2J",
+      "ETH/USD": "EdVCmQ9FSPcVe5YySXDPCRmc8aDQLKJ9xvYBMZPie1Vw"
+    }
+  },
+  "status": "deployed",
+  "signatures": {
+    "arena": "2NKcAxDuSFEywqoRSSLoCCcrKyWJE1Vq2aaSoegUTdrcWkZuz2ZT7Con6p7tJ1GDDhHGamAAzey1dkZJQCQVQc6A",
+    "council": "3njY64x55xRar41G1UGhVNCZVgvCs7SZVT5jMA8AExizsZ8ZGJfCh6EAhUdWz1EWmRgUqULGyZ7YwD31rr2SHGZw"
+  }
+}

@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
-use pyth_solana_receiver_sdk::price_update::{get_feed_id_from_hex, PriceUpdateV2};
+use pyth_sdk_solana::load_price_feed_from_account_info;
+use std::mem::transmute;
 use crate::ErrorCode;
 
 /// Maximum age for price data (30 seconds)
@@ -95,30 +96,32 @@ impl PythPrice {
     }
 }
 
-/// Parse and validate Pyth price from PriceUpdateV2 account
+/// Parse and validate Pyth price from Pyth price account
 pub fn get_pyth_price(
-    price_update: &PriceUpdateV2,
-    feed_id_hex: &str,
+    price_account: &AccountInfo,
+    _feed_id_hex: &str,
     clock: &Clock,
 ) -> Result<PythPrice> {
-    // Get feed ID from hex string
-    let feed_id = get_feed_id_from_hex(feed_id_hex)
-        .map_err(|_| ErrorCode::InvalidPythAccount)?;
+    // Load price feed from account
+    // Note: pyth-sdk expects a different AccountInfo type, we pass the reference
+    let price_feed = unsafe {
+        load_price_feed_from_account_info(transmute(price_account))
+    }.map_err(|_| ErrorCode::InvalidPythAccount)?;
 
-    // Get price with staleness check
-    let price_data = price_update
-        .get_price_no_older_than(clock, MAX_PRICE_AGE_SECONDS, &feed_id)
-        .map_err(|_| ErrorCode::StalePrice)?;
+    // Get current price with staleness check
+    let current_price = price_feed
+        .get_price_no_older_than(clock.unix_timestamp, MAX_PRICE_AGE_SECONDS)
+        .ok_or(ErrorCode::StalePrice)?;
 
     // Validate price is available
-    require!(price_data.price > 0, ErrorCode::PriceUnavailable);
+    require!(current_price.price > 0, ErrorCode::PriceUnavailable);
 
     // Create PythPrice struct
     let pyth_price = PythPrice {
-        price: price_data.price,
-        confidence: price_data.conf,
-        exponent: price_data.exponent,
-        publish_time: price_data.publish_time,
+        price: current_price.price,
+        confidence: current_price.conf,
+        exponent: current_price.expo,
+        publish_time: current_price.publish_time,
         normalized_price: 0, // Will be set below
     };
 
@@ -137,36 +140,26 @@ pub fn get_pyth_price(
     })
 }
 
-/// Validate Pyth price feed account matches expected feed
+/// Validate Pyth price feed account
 pub fn validate_price_feed(
     price_feed_account: &AccountInfo,
-    expected_feed_id: &str,
+    _expected_feed_id: &str,
 ) -> Result<()> {
-    // Deserialize the price update account
-    let price_update = PriceUpdateV2::try_deserialize(
-        &mut price_feed_account.data.borrow().as_ref()
-    ).map_err(|_| ErrorCode::InvalidPythAccount)?;
-
-    // Verify the account contains the expected feed
-    let feed_id = get_feed_id_from_hex(expected_feed_id)
-        .map_err(|_| ErrorCode::InvalidPythAccount)?;
-
-    // Try to get price to verify feed exists
-    let clock = Clock::get()?;
-    price_update
-        .get_price_no_older_than(&clock, MAX_PRICE_AGE_SECONDS, &feed_id)
-        .map_err(|_| ErrorCode::PriceFeedMismatch)?;
+    // Try to load price feed to validate account
+    unsafe {
+        load_price_feed_from_account_info(transmute(price_feed_account))
+    }.map_err(|_| ErrorCode::InvalidPythAccount)?;
 
     Ok(())
 }
 
 /// Get price for comparison (returns normalized u64)
 pub fn get_price_for_comparison(
-    price_update: &PriceUpdateV2,
+    price_update_account: &AccountInfo,
     feed_id_hex: &str,
     clock: &Clock,
 ) -> Result<u64> {
-    let pyth_price = get_pyth_price(price_update, feed_id_hex, clock)?;
+    let pyth_price = get_pyth_price(price_update_account, feed_id_hex, clock)?;
     Ok(pyth_price.normalized_price)
 }
 

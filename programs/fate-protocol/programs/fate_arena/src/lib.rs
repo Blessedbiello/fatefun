@@ -6,7 +6,7 @@ pub mod utils;
 use instructions::*;
 pub use utils::*;
 
-declare_id!("FATEarenaBVy3Q8xPzRZYVHf8k3J7d5cKqX4mW9sPump");
+declare_id!("HRF68UNqq3ASruJFacsBhV7iQyfLF697FhjPCfLNXQxa");
 
 #[program]
 pub mod fate_arena {

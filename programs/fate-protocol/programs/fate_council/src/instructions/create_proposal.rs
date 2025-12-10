@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use crate::constants::seeds;
-use crate::errors::*;
+use crate::errors::ErrorCode as CouncilError;
 use crate::state::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
@@ -51,11 +51,11 @@ pub fn handler(ctx: Context<CreateProposal>, params: CreateProposalParams) -> Re
     // Validate market name and description lengths
     require!(
         params.market_name.len() > 0 && params.market_name.len() <= Proposal::MAX_NAME_LEN,
-        ErrorCode::InvalidMarketName
+        CouncilError::InvalidMarketName
     );
     require!(
         params.market_description.len() > 0 && params.market_description.len() <= Proposal::MAX_DESCRIPTION_LEN,
-        ErrorCode::InvalidMarketDescription
+        CouncilError::InvalidMarketDescription
     );
 
     // Transfer proposal stake to vault
@@ -99,7 +99,7 @@ pub fn handler(ctx: Context<CreateProposal>, params: CreateProposalParams) -> Re
 
     // Increment counter
     config.total_proposals = config.total_proposals.checked_add(1)
-        .ok_or(ErrorCode::ArithmeticOverflow)?;
+        .ok_or(CouncilError::ArithmeticOverflow)?;
 
     emit!(ProposalCreated {
         proposal_id,
@@ -109,7 +109,7 @@ pub fn handler(ctx: Context<CreateProposal>, params: CreateProposalParams) -> Re
         voting_ends_at: proposal.voting_ends_at,
     });
 
-    msg!("Proposal {} created: {}", proposal_id, params.market_name);
+    msg!("Proposal {} created", proposal_id);
     msg!("Voting ends at: {}", proposal.voting_ends_at);
 
     Ok(())
