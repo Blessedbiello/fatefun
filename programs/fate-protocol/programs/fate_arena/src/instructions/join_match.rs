@@ -29,11 +29,9 @@ pub struct JoinMatch<'info> {
     pub player_entry: Account<'info, PlayerEntry>,
 
     #[account(
-        init_if_needed,
-        payer = player,
-        space = UserProfile::LEN,
+        mut,
         seeds = [seeds::USER_PROFILE, player.key().as_ref()],
-        bump
+        bump = user_profile.bump
     )]
     pub user_profile: Account<'info, UserProfile>,
 
@@ -66,23 +64,6 @@ pub fn handler(ctx: Context<JoinMatch>) -> Result<()> {
     player_entry.claimed = false;
     player_entry.winnings = 0;
     player_entry.bump = ctx.bumps.player_entry;
-
-    // Initialize user profile if new
-    if user_profile.total_matches == 0 {
-        user_profile.user = ctx.accounts.player.key();
-        user_profile.username = None;
-        user_profile.total_matches = 0;
-        user_profile.wins = 0;
-        user_profile.losses = 0;
-        user_profile.total_wagered = 0;
-        user_profile.total_won = 0;
-        user_profile.current_streak = 0;
-        user_profile.best_streak = 0;
-        user_profile.xp = 0;
-        user_profile.level = 1;
-        user_profile.created_at = clock.unix_timestamp;
-        user_profile.bump = ctx.bumps.user_profile;
-    }
 
     // Transfer entry fee to vault
     system_program::transfer(

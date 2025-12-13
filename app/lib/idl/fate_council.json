@@ -1,0 +1,901 @@
+{
+  "version": "1.0.0",
+  "name": "fate_council",
+  "instructions": [
+    {
+      "name": "initializeCouncil",
+      "docs": [
+        "Initialize the council with futarchy governance"
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "InitializeCouncilParams"
+          }
+        }
+      ]
+    },
+    {
+      "name": "createProposal",
+      "docs": [
+        "Create a new market proposal (stakes SOL)"
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "proposal",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "proposalVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "proposer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "CreateProposalParams"
+          }
+        }
+      ]
+    },
+    {
+      "name": "tradeOutcome",
+      "docs": [
+        "Trade on proposal outcome (buy Pass or Fail tokens)"
+      ],
+      "accounts": [
+        {
+          "name": "proposal",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "proposalVote",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "proposalVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "trader",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "TradeOutcomeParams"
+          }
+        }
+      ]
+    },
+    {
+      "name": "resolveProposal",
+      "docs": [
+        "Resolve proposal after voting period ends"
+      ],
+      "accounts": [
+        {
+          "name": "proposal",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "resolver",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "Anyone can call this after voting period ends"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "executeProposal",
+      "docs": [
+        "Execute a passed proposal (creates market via CPI)"
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "proposal",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "proposalVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "proposer",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The proposer who will receive refund + bonus"
+          ]
+        },
+        {
+          "name": "fateArenaProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "executor",
+          "isMut": false,
+          "isSigner": true,
+          "docs": [
+            "Remaining accounts:",
+            "[0] = arena_config (for fate_arena)",
+            "[1] = market (to be created)",
+            "[2] = system_program",
+            "etc. (all accounts needed for fate_arena::create_market CPI)"
+          ]
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claimVoteTokens",
+      "docs": [
+        "Claim winnings from a resolved proposal"
+      ],
+      "accounts": [
+        {
+          "name": "proposal",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "proposalVote",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "proposalVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "voter",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancelProposal",
+      "docs": [
+        "Cancel a proposal (only proposer, before voting starts)"
+      ],
+      "accounts": [
+        {
+          "name": "proposal",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "proposalVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "proposer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "CouncilConfig",
+      "docs": [
+        "CouncilConfig - Single instance PDA for council configuration"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "docs": [
+              "Council authority (can update config)"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "fateArenaProgram",
+            "docs": [
+              "FATE Arena program ID (for CPI calls)"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "proposalStake",
+            "docs": [
+              "SOL required to create a proposal"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "votingPeriod",
+            "docs": [
+              "Voting period duration (48 hours default = 172800 seconds)"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "totalProposals",
+            "docs": [
+              "Total number of proposals created"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "proposerBonusBps",
+            "docs": [
+              "Proposer bonus percentage (basis points, e.g., 200 = 2%)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "Bump seed for PDA"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Proposal",
+      "docs": [
+        "Proposal - One per market proposal using futarchy"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposalId",
+            "docs": [
+              "Unique proposal ID"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "proposer",
+            "docs": [
+              "Proposer's public key"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "marketName",
+            "docs": [
+              "Market name (max 64 bytes)"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          },
+          {
+            "name": "marketDescription",
+            "docs": [
+              "Market description (max 200 bytes)"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                200
+              ]
+            }
+          },
+          {
+            "name": "pythPriceFeed",
+            "docs": [
+              "Pyth price feed for this market"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "status",
+            "docs": [
+              "Current status"
+            ],
+            "type": {
+              "defined": "ProposalStatus"
+            }
+          },
+          {
+            "name": "passPool",
+            "docs": [
+              "Total SOL in \"pass\" pool"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "failPool",
+            "docs": [
+              "Total SOL in \"fail\" pool"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "passPrice",
+            "docs": [
+              "Derived price for \"pass\" outcome (in basis points, 0-10000)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "failPrice",
+            "docs": [
+              "Derived price for \"fail\" outcome (in basis points, 0-10000)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "createdAt",
+            "docs": [
+              "Creation timestamp"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "votingEndsAt",
+            "docs": [
+              "When voting ends"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "executedAt",
+            "docs": [
+              "When proposal was executed (if executed)"
+            ],
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "Bump seed for PDA"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposalVote",
+      "docs": [
+        "ProposalVote - Tracks each trader's position in a proposal's prediction market"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposal",
+            "docs": [
+              "Proposal this vote is for"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "voter",
+            "docs": [
+              "Trader/voter public key"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "passAmount",
+            "docs": [
+              "Amount invested in \"pass\" pool"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "failAmount",
+            "docs": [
+              "Amount invested in \"fail\" pool"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "claimed",
+            "docs": [
+              "Whether winnings have been claimed"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "Bump seed for PDA"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "TradeOutcomeParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "outcome",
+            "type": {
+              "defined": "OutcomeSide"
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreateProposalParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "marketName",
+            "type": "string"
+          },
+          {
+            "name": "marketDescription",
+            "type": "string"
+          },
+          {
+            "name": "pythPriceFeed",
+            "type": "publicKey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "InitializeCouncilParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fateArenaProgram",
+            "docs": [
+              "FATE Arena program ID for CPI calls"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "proposalStake",
+            "docs": [
+              "SOL required to create proposals (default: 1 SOL)"
+            ],
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "votingPeriod",
+            "docs": [
+              "Voting period in seconds (default: 48 hours)"
+            ],
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "proposerBonusBps",
+            "docs": [
+              "Proposer bonus in basis points (default: 200 = 2%)"
+            ],
+            "type": {
+              "option": "u16"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "OutcomeSide",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pass"
+          },
+          {
+            "name": "Fail"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposalStatus",
+      "docs": [
+        "Proposal status in the futarchy system"
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Passed"
+          },
+          {
+            "name": "Rejected"
+          },
+          {
+            "name": "Executed"
+          },
+          {
+            "name": "Cancelled"
+          }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "OutcomeTraded",
+      "fields": [
+        {
+          "name": "proposalId",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "trader",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "outcome",
+          "type": {
+            "defined": "OutcomeSide"
+          },
+          "index": false
+        },
+        {
+          "name": "amount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "passPool",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "failPool",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "passPrice",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "failPrice",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "VoteTokensClaimed",
+      "fields": [
+        {
+          "name": "proposalId",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "voter",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "winnerAmount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "shareOfLosingPool",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "totalPayout",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "ProposalCreated",
+      "fields": [
+        {
+          "name": "proposalId",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "proposer",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "marketName",
+          "type": "string",
+          "index": false
+        },
+        {
+          "name": "pythPriceFeed",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "votingEndsAt",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "ProposalExecuted",
+      "fields": [
+        {
+          "name": "proposalId",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "proposer",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "marketName",
+          "type": "string",
+          "index": false
+        },
+        {
+          "name": "proposerBonus",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "executedAt",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "CouncilInitialized",
+      "fields": [
+        {
+          "name": "authority",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "fateArenaProgram",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "proposalStake",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "votingPeriod",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "ProposalResolved",
+      "fields": [
+        {
+          "name": "proposalId",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "status",
+          "type": {
+            "defined": "ProposalStatus"
+          },
+          "index": false
+        },
+        {
+          "name": "passPool",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "failPool",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "passPrice",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "failPrice",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "ProposalNotActive",
+      "msg": "Proposal is not active"
+    },
+    {
+      "code": 6001,
+      "name": "VotingPeriodNotEnded",
+      "msg": "Voting period has not ended yet"
+    },
+    {
+      "code": 6002,
+      "name": "VotingPeriodEnded",
+      "msg": "Voting period has already ended"
+    },
+    {
+      "code": 6003,
+      "name": "ProposalAlreadyExecuted",
+      "msg": "Proposal has already been executed"
+    },
+    {
+      "code": 6004,
+      "name": "ProposalDidNotPass",
+      "msg": "Proposal did not pass"
+    },
+    {
+      "code": 6005,
+      "name": "ProposalNotResolved",
+      "msg": "Proposal has not been resolved yet"
+    },
+    {
+      "code": 6006,
+      "name": "TradeAmountTooSmall",
+      "msg": "Trade amount below minimum"
+    },
+    {
+      "code": 6007,
+      "name": "TradeAmountTooLarge",
+      "msg": "Trade amount above maximum"
+    },
+    {
+      "code": 6008,
+      "name": "AlreadyClaimed",
+      "msg": "Winnings already claimed"
+    },
+    {
+      "code": 6009,
+      "name": "NoWinnings",
+      "msg": "No winnings to claim"
+    },
+    {
+      "code": 6010,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidMarketName",
+      "msg": "Invalid market name length"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidMarketDescription",
+      "msg": "Invalid market description length"
+    },
+    {
+      "code": 6013,
+      "name": "ArithmeticOverflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6014,
+      "name": "InsufficientLiquidity",
+      "msg": "Insufficient liquidity in pool"
+    },
+    {
+      "code": 6015,
+      "name": "CannotCancelAfterVotingStarted",
+      "msg": "Cannot cancel proposal after voting has started"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { useGameStore } from '@/store/gameStore'
 import { MatchStatus } from '@/types/arena'
 
@@ -144,9 +144,6 @@ export function useTimeRemaining(targetTimestamp: number | bigint | null): {
     expired: remaining === 0,
   }
 }
-
-// React import for useTimeRemaining hook
-import React from 'react'
 
 // Hook for periodic auto-refresh based on match state
 export function useAutoRefresh(program: any, interval: number = 5000) {

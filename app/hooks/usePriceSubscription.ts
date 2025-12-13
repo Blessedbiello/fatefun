@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
-import { Connection, PublicKey } from '@solana/web3.js'
+import { PublicKey } from '@solana/web3.js'
 import { useConnection } from '@solana/wallet-adapter-react'
-import { PythHttpClient, getPythProgramKeyForCluster } from '@pythnetwork/client'
+import { PythHttpClient, getPythProgramKeyForCluster, parsePriceData } from '@pythnetwork/client'
 import { useGameStore } from '@/store/gameStore'
 
 interface PriceSubscriptionOptions {
@@ -55,20 +55,16 @@ export function usePriceSubscription({ marketId, enabled = true, pollingInterval
       try {
         subscriptionIdRef.current = connection.onAccountChange(
           priceFeedPubkey,
-          async (accountInfo) => {
+          (accountInfo) => {
             try {
-              if (!pythClientRef.current) return
+              // Parse Pyth price data from account
+              const priceData = parsePriceData(accountInfo.data)
 
-              const priceData = await pythClientRef.current.getAssetPricesFromAccounts([accountInfo])
-
-              if (priceData && priceData.length > 0) {
-                const price = priceData[0].price
-                if (price) {
-                  const priceValue = Number(price)
-                  if (priceValue !== lastPriceRef.current) {
-                    lastPriceRef.current = priceValue
-                    updateCurrentPrice(priceValue)
-                  }
+              if (priceData.price && priceData.confidence) {
+                const priceValue = priceData.price
+                if (priceValue !== lastPriceRef.current) {
+                  lastPriceRef.current = priceValue
+                  updateCurrentPrice(priceValue)
                 }
               }
             } catch (error) {
@@ -96,13 +92,18 @@ export function usePriceSubscription({ marketId, enabled = true, pollingInterval
 
       const poll = async () => {
         try {
-          if (!pythClientRef.current) return
+          // Fetch account data directly
+          const accountInfo = await connection.getAccountInfo(priceFeedPubkey)
+          if (!accountInfo) {
+            console.error('Failed to fetch Pyth account info')
+            return
+          }
 
-          const data = await pythClientRef.current.getData()
-          const priceData = data.productPrice.get(priceFeedAddress)
+          // Parse price data from account
+          const priceData = parsePriceData(accountInfo.data)
 
-          if (priceData?.price) {
-            const priceValue = Number(priceData.price)
+          if (priceData.price && priceData.confidence) {
+            const priceValue = priceData.price
             if (priceValue !== lastPriceRef.current) {
               lastPriceRef.current = priceValue
               updateCurrentPrice(priceValue)

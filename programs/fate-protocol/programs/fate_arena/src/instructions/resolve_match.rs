@@ -29,7 +29,7 @@ pub struct ResolveMatch<'info> {
     )]
     pub match_account: Account<'info, Match>,
 
-    /// Pyth price update account
+    /// CHECK: Pyth price update account - validated in handler via validate_price_feed() and get_pyth_price()
     pub price_update: AccountInfo<'info>,
 
     pub resolver: Signer<'info>,

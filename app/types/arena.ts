@@ -18,27 +18,51 @@ export enum PredictionSide {
   Lower = 'Lower',
 }
 
-export interface Match {
-  publicKey: PublicKey
+// Raw Match data from blockchain (matches IDL exactly)
+export interface MatchAccount {
   matchId: bigint
-  marketId: number
-  matchType: MatchType
-  status: MatchStatus
+  market: PublicKey // Note: This is a PublicKey, not a number
   creator: PublicKey
+  matchType: MatchType
   entryFee: bigint
   maxPlayers: number
   currentPlayers: number
-  predictionWindow: bigint
-  resolutionTime: bigint
+  status: MatchStatus
   startPrice: bigint | null
   endPrice: bigint | null
+  predictionWindow: bigint
+  resolutionTime: bigint
   winningSide: PredictionSide | null
-  prizePool: bigint
-  protocolFee: bigint
+  totalPot: bigint
   createdAt: bigint
   startedAt: bigint | null
   resolvedAt: bigint | null
   bump: number
+}
+
+// Enhanced Match interface for frontend use (with computed properties)
+export interface Match extends MatchAccount {
+  publicKey: PublicKey
+
+  // Computed/helper properties for frontend convenience
+  marketId?: number // Extracted from market data if available
+  marketName?: string // Fetched from Market account
+  predictionDeadline: bigint // Calculated: createdAt + predictionWindow
+
+  // Alias properties for backwards compatibility
+  startingPrice: bigint | null // Alias for startPrice
+  endingPrice: bigint | null // Alias for endPrice
+  prizePool: bigint // Alias for totalPot
+
+  // Pool distribution (calculated from player entries)
+  higherPool?: bigint
+  lowerPool?: bigint
+
+  // Player list (fetched separately)
+  players?: PlayerEntry[]
+
+  // Protocol fee (calculated based on config)
+  protocolFee?: bigint
 }
 
 export interface Market {

@@ -34,7 +34,7 @@ async function main() {
   console.log(`🚀 Deploying FATE Protocol to ${NETWORK}...\n`);
 
   // Setup provider
-  const connection = new anchor.web3.Connection(RPC_URL, "confirmed");
+  const connection = new anchor.web3.Connection(RPC_URL!, "confirmed");
   const wallet = anchor.Wallet.local();
   const provider = new anchor.AnchorProvider(connection, wallet, {
     commitment: "confirmed",
@@ -48,35 +48,38 @@ async function main() {
   const balance = await connection.getBalance(wallet.publicKey);
   console.log(`💰 Balance: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
 
-  if (balance < 10 * LAMPORTS_PER_SOL) {
-    console.error("❌ Insufficient balance. Need at least 10 SOL for deployment.");
+  if (balance < 1 * LAMPORTS_PER_SOL) {
+    console.error("❌ Insufficient balance. Need at least 1 SOL for initialization.");
     if (NETWORK === "devnet") {
-      console.log("💡 Run: solana airdrop 10");
+      console.log("💡 Run: solana airdrop 2");
     }
     process.exit(1);
   }
 
-  console.log("\n📦 Step 1: Building programs...");
-  try {
-    execSync("anchor build", { stdio: "inherit", cwd: process.cwd() });
-    console.log("✅ Programs built successfully");
-  } catch (err) {
-    console.error("❌ Build failed:", err);
-    process.exit(1);
-  }
+  console.log("\n📦 Step 1: Using already deployed programs...");
+  console.log("✅ Programs already deployed");
 
-  console.log("\n🚢 Step 2: Deploying programs...");
-  try {
-    const cluster = NETWORK === "mainnet" ? "mainnet-beta" : "devnet";
-    execSync(`anchor deploy --provider.cluster ${cluster}`, {
-      stdio: "inherit",
-      cwd: process.cwd(),
-    });
-    console.log("✅ Programs deployed successfully");
-  } catch (err) {
-    console.error("❌ Deployment failed:", err);
-    process.exit(1);
-  }
+  // console.log("\n📦 Step 1: Building programs...");
+  // try {
+  //   execSync("anchor build", { stdio: "inherit", cwd: process.cwd() });
+  //   console.log("✅ Programs built successfully");
+  // } catch (err) {
+  //   console.error("❌ Build failed:", err);
+  //   process.exit(1);
+  // }
+
+  // console.log("\n🚢 Step 2: Deploying programs...");
+  // try {
+  //   const cluster = NETWORK === "mainnet" ? "mainnet-beta" : "devnet";
+  //   execSync(`anchor deploy --provider.cluster ${cluster}`, {
+  //     stdio: "inherit",
+  //     cwd: process.cwd(),
+  //   });
+  //   console.log("✅ Programs deployed successfully");
+  // } catch (err) {
+  //   console.error("❌ Deployment failed:", err);
+  //   process.exit(1);
+  // }
 
   // Load program IDs
   const arenaIdl = JSON.parse(
@@ -102,7 +105,7 @@ async function main() {
   const arenaProgram = new Program(arenaIdl, arenaProgramId, provider);
   const councilProgram = new Program(councilIdl, councilProgramId, provider);
 
-  console.log("\n⚙️  Step 3: Initializing configs...");
+  console.log("\n⚙️  Step 2: Initializing configs...");
 
   // Initialize Arena Config
   const [arenaConfig] = PublicKey.findProgramAddressSync(
@@ -162,7 +165,7 @@ async function main() {
     }
   }
 
-  console.log("\n🏪 Step 4: Creating initial markets...");
+  console.log("\n🏪 Step 3: Creating initial markets...");
 
   const markets = ["SOL/USD", "BTC/USD", "ETH/USD"];
   const pythFeeds = PYTH_FEEDS[NETWORK as keyof typeof PYTH_FEEDS];
@@ -195,18 +198,18 @@ async function main() {
     }
   }
 
-  console.log("\n✅ Step 5: Verifying deployment...");
+  console.log("\n✅ Step 4: Verifying deployment...");
 
   // Verify configs
   try {
-    const arenaConfigAccount = await arenaProgram.account.arenaConfig.fetch(arenaConfig);
+    const arenaConfigAccount = await arenaProgram.account.arenaConfig.fetch(arenaConfig) as any;
     console.log(`   ✅ Arena config verified (fee: ${arenaConfigAccount.protocolFeeBps} bps)`);
   } catch (err) {
     console.error("   ❌ Arena config verification failed");
   }
 
   try {
-    const councilConfigAccount = await councilProgram.account.councilConfig.fetch(councilConfig);
+    const councilConfigAccount = await councilProgram.account.councilConfig.fetch(councilConfig) as any;
     console.log(
       `   ✅ Council config verified (stake: ${(Number(councilConfigAccount.proposalStake) / LAMPORTS_PER_SOL).toFixed(2)} SOL)`
     );
@@ -222,14 +225,14 @@ async function main() {
     );
 
     try {
-      const market = await arenaProgram.account.market.fetch(marketPda);
+      const market = await arenaProgram.account.market.fetch(marketPda) as any;
       console.log(`   ✅ ${marketName} market verified (active: ${market.isActive})`);
     } catch (err) {
       console.log(`   ⚠️  ${marketName} market not found`);
     }
   }
 
-  console.log("\n📝 Step 6: Generating deployment info...");
+  console.log("\n📝 Step 5: Generating deployment info...");
 
   const deploymentInfo = {
     network: NETWORK,

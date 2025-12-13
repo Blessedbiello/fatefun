@@ -1,17 +1,23 @@
 [toolchain]
-anchor_version = "0.30.1"
+anchor_version = "0.29.0"
 
 [features]
 resolution = true
 skip-lint = false
+
+[workspace]
+members = [
+    "programs/fate-protocol/programs/fate_arena",
+    "programs/fate-protocol/programs/fate_council"
+]
 
 [programs.localnet]
 fate_arena = "FATEarenaBVy3Q8xPzRZYVHf8k3J7d5cKqX4mW9sPump"
 fate_council = "FATEcouncBVy3Q8xPzRZYVHf8k3J7d5cKqX4mW9sPump"
 
 [programs.devnet]
-fate_arena = "FATEarenaBVy3Q8xPzRZYVHf8k3J7d5cKqX4mW9sPump"
-fate_council = "FATEcouncBVy3Q8xPzRZYVHf8k3J7d5cKqX4mW9sPump"
+fate_arena = "HRF68UNqq3ASruJFacsBhV7iQyfLF697FhjPCfLNXQxa"
+fate_council = "DnseM3GuRFjz5SxgRMpWGeSubkZZu8TxNrpQYTZVnFvZ"
 
 [programs.mainnet]
 fate_arena = "FATEarenaBVy3Q8xPzRZYVHf8k3J7d5cKqX4mW9sPump"

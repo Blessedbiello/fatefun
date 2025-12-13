@@ -1,0 +1,1410 @@
+{
+  "version": "1.0.0",
+  "name": "fate_arena",
+  "instructions": [
+    {
+      "name": "initializeConfig",
+      "docs": [
+        "Initialize global game configuration"
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "treasury",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "InitializeConfigParams"
+          }
+        }
+      ]
+    },
+    {
+      "name": "createMarket",
+      "docs": [
+        "Create a new market with Pyth price feed"
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "pythPriceFeed",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Pyth price feed account - we validate it's a valid Pyth account"
+          ]
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "CreateMarketParams"
+          }
+        }
+      ]
+    },
+    {
+      "name": "createMatch",
+      "docs": [
+        "Create a new match (creator auto-joins)"
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "market",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "matchAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "playerEntry",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userProfile",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "creator",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "CreateMatchParams"
+          }
+        }
+      ]
+    },
+    {
+      "name": "joinMatch",
+      "docs": [
+        "Join an existing match"
+      ],
+      "accounts": [
+        {
+          "name": "matchAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "playerEntry",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userProfile",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "player",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "submitPrediction",
+      "docs": [
+        "Submit prediction for a match"
+      ],
+      "accounts": [
+        {
+          "name": "market",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "matchAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "playerEntry",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "priceUpdate",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "player",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "SubmitPredictionParams"
+          }
+        }
+      ]
+    },
+    {
+      "name": "resolveMatch",
+      "docs": [
+        "Resolve a match using Pyth oracle"
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "market",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "matchAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "priceUpdate",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "resolver",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claimWinnings",
+      "docs": [
+        "Claim winnings from a completed match"
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "matchAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "playerEntry",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userProfile",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "vault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "treasury",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "player",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancelMatch",
+      "docs": [
+        "Cancel an open match"
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "matchAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "updateUserProfile",
+      "docs": [
+        "Update user profile (username)"
+      ],
+      "accounts": [
+        {
+          "name": "userProfile",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": "UpdateUserProfileParams"
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "GameConfig",
+      "docs": [
+        "Global game configuration",
+        "PDA: [\"game-config\"]"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "docs": [
+              "Authority that can update config"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "treasury",
+            "docs": [
+              "Treasury wallet to receive protocol fees"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "protocolFeeBps",
+            "docs": [
+              "Protocol fee in basis points (300 = 3%)"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "totalMatches",
+            "docs": [
+              "Total number of matches created"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "totalVolume",
+            "docs": [
+              "Total volume traded in lamports"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "paused",
+            "docs": [
+              "Emergency pause flag"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Market",
+      "docs": [
+        "Market definition for different asset pairs",
+        "PDA: [\"market\", market_id.to_le_bytes()]"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "marketId",
+            "docs": [
+              "Unique market identifier"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "name",
+            "docs": [
+              "Market name (e.g., \"SOL/USD\")",
+              "String stored as fixed-size array"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "description",
+            "docs": [
+              "Market description"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
+          },
+          {
+            "name": "pythPriceFeed",
+            "docs": [
+              "Pyth price feed account"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "active",
+            "docs": [
+              "Whether market is active for new matches"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "totalMatches",
+            "docs": [
+              "Total matches created in this market"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "createdAt",
+            "docs": [
+              "Creation timestamp"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Match",
+      "docs": [
+        "Match instance",
+        "PDA: [\"match\", match_id.to_le_bytes()]"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "matchId",
+            "docs": [
+              "Unique match identifier"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "market",
+            "docs": [
+              "Market this match belongs to"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "creator",
+            "docs": [
+              "Match creator"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "matchType",
+            "docs": [
+              "Type of match"
+            ],
+            "type": {
+              "defined": "MatchType"
+            }
+          },
+          {
+            "name": "entryFee",
+            "docs": [
+              "Entry fee in lamports"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "maxPlayers",
+            "docs": [
+              "Maximum number of players"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "currentPlayers",
+            "docs": [
+              "Current number of players"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "status",
+            "docs": [
+              "Match status"
+            ],
+            "type": {
+              "defined": "MatchStatus"
+            }
+          },
+          {
+            "name": "startPrice",
+            "docs": [
+              "Starting price (set when match starts)"
+            ],
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "endPrice",
+            "docs": [
+              "Ending price (set when match resolves)"
+            ],
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
+            "name": "predictionWindow",
+            "docs": [
+              "Time window in seconds for players to make predictions"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "resolutionTime",
+            "docs": [
+              "Timestamp when price will be checked for resolution"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "winningSide",
+            "docs": [
+              "Winning prediction side (set after resolution)"
+            ],
+            "type": {
+              "option": {
+                "defined": "PredictionSide"
+              }
+            }
+          },
+          {
+            "name": "totalPot",
+            "docs": [
+              "Total pot accumulated from entry fees"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "createdAt",
+            "docs": [
+              "Match creation timestamp"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "startedAt",
+            "docs": [
+              "Match start timestamp"
+            ],
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "resolvedAt",
+            "docs": [
+              "Match resolution timestamp"
+            ],
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PlayerEntry",
+      "docs": [
+        "Player entry in a match",
+        "PDA: [\"player-entry\", match.key(), player.key()]"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "matchAccount",
+            "docs": [
+              "Match this entry belongs to"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "player",
+            "docs": [
+              "Player wallet"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "prediction",
+            "docs": [
+              "Player's prediction (None until locked)"
+            ],
+            "type": {
+              "option": {
+                "defined": "PredictionSide"
+              }
+            }
+          },
+          {
+            "name": "amountStaked",
+            "docs": [
+              "Amount staked by player"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "predictionLockedAt",
+            "docs": [
+              "Timestamp when prediction was locked"
+            ],
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "claimed",
+            "docs": [
+              "Whether winnings have been claimed"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "winnings",
+            "docs": [
+              "Winnings amount (calculated after resolution)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserProfile",
+      "docs": [
+        "User profile and statistics",
+        "PDA: [\"user-profile\", user.key()]"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "docs": [
+              "User wallet"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "username",
+            "docs": [
+              "Optional username (stored as fixed-size array)"
+            ],
+            "type": {
+              "option": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          },
+          {
+            "name": "totalMatches",
+            "docs": [
+              "Total matches participated in"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "wins",
+            "docs": [
+              "Total wins"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "losses",
+            "docs": [
+              "Total losses"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "totalWagered",
+            "docs": [
+              "Total amount wagered"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "totalWon",
+            "docs": [
+              "Total amount won"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "currentStreak",
+            "docs": [
+              "Current win/loss streak (negative for losses)"
+            ],
+            "type": "i32"
+          },
+          {
+            "name": "bestStreak",
+            "docs": [
+              "Best win streak achieved"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "xp",
+            "docs": [
+              "Experience points"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "level",
+            "docs": [
+              "Current level"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "createdAt",
+            "docs": [
+              "Profile creation timestamp"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "CreateMarketParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreateMatchParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "matchType",
+            "type": {
+              "defined": "MatchType"
+            }
+          },
+          {
+            "name": "entryFee",
+            "type": "u64"
+          },
+          {
+            "name": "maxPlayers",
+            "type": "u8"
+          },
+          {
+            "name": "predictionWindow",
+            "type": "i64"
+          },
+          {
+            "name": "matchDuration",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "InitializeConfigParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "protocolFeeBps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SubmitPredictionParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "prediction",
+            "type": {
+              "defined": "PredictionSide"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdateUserProfileParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "username",
+            "type": {
+              "option": "string"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PriceComparison",
+      "docs": [
+        "Compare two prices and determine winner"
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Higher"
+          },
+          {
+            "name": "Lower"
+          },
+          {
+            "name": "Equal"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MatchType",
+      "docs": [
+        "Type of match"
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "FlashDuel"
+          },
+          {
+            "name": "BattleRoyale"
+          },
+          {
+            "name": "Tournament"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MatchStatus",
+      "docs": [
+        "Match lifecycle status"
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Open"
+          },
+          {
+            "name": "InProgress"
+          },
+          {
+            "name": "Resolving"
+          },
+          {
+            "name": "Completed"
+          },
+          {
+            "name": "Cancelled"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PredictionSide",
+      "docs": [
+        "Prediction direction"
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Higher"
+          },
+          {
+            "name": "Lower"
+          }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "MatchCancelled",
+      "fields": [
+        {
+          "name": "matchId",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "cancelledBy",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "WinningsClaimed",
+      "fields": [
+        {
+          "name": "matchId",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "player",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "amount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "isWinner",
+          "type": "bool",
+          "index": false
+        },
+        {
+          "name": "isRefund",
+          "type": "bool",
+          "index": false
+        },
+        {
+          "name": "newLevel",
+          "type": "u16",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "MarketCreated",
+      "fields": [
+        {
+          "name": "marketId",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "index": false
+        },
+        {
+          "name": "pythPriceFeed",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "MatchCreated",
+      "fields": [
+        {
+          "name": "matchId",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "market",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "creator",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "matchType",
+          "type": {
+            "defined": "MatchType"
+          },
+          "index": false
+        },
+        {
+          "name": "entryFee",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "maxPlayers",
+          "type": "u8",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "ConfigInitialized",
+      "fields": [
+        {
+          "name": "authority",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "treasury",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "protocolFeeBps",
+          "type": "u16",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "PlayerJoined",
+      "fields": [
+        {
+          "name": "matchId",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "player",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "currentPlayers",
+          "type": "u8",
+          "index": false
+        },
+        {
+          "name": "matchFull",
+          "type": "bool",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "MatchResolved",
+      "fields": [
+        {
+          "name": "matchId",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "startPrice",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "endPrice",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "winningSide",
+          "type": {
+            "option": {
+              "defined": "PredictionSide"
+            }
+          },
+          "index": false
+        },
+        {
+          "name": "totalPot",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "priceChange",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "PredictionSubmitted",
+      "fields": [
+        {
+          "name": "matchId",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "player",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "prediction",
+          "type": {
+            "defined": "PredictionSide"
+          },
+          "index": false
+        },
+        {
+          "name": "startPrice",
+          "type": {
+            "option": "u64"
+          },
+          "index": false
+        },
+        {
+          "name": "lockedAt",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "UsernameUpdated",
+      "fields": [
+        {
+          "name": "user",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "username",
+          "type": "string",
+          "index": false
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "GamePaused",
+      "msg": "Game is currently paused"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidProtocolFee",
+      "msg": "Invalid protocol fee (max 10%)"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidMarketName",
+      "msg": "Invalid market name"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidMarketDescription",
+      "msg": "Invalid market description"
+    },
+    {
+      "code": 6004,
+      "name": "MarketNotActive",
+      "msg": "Market is not active"
+    },
+    {
+      "code": 6005,
+      "name": "MatchFull",
+      "msg": "Match is full"
+    },
+    {
+      "code": 6006,
+      "name": "MatchNotStarted",
+      "msg": "Match has not started"
+    },
+    {
+      "code": 6007,
+      "name": "MatchAlreadyStarted",
+      "msg": "Match already started"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidMatchStatus",
+      "msg": "Match is not in correct status"
+    },
+    {
+      "code": 6009,
+      "name": "PredictionWindowNotClosed",
+      "msg": "Cannot start match yet (prediction window open)"
+    },
+    {
+      "code": 6010,
+      "name": "ResolutionTimeNotReached",
+      "msg": "Cannot resolve match yet"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidMatchType",
+      "msg": "Invalid match type"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidEntryFee",
+      "msg": "Invalid entry fee"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidMaxPlayers",
+      "msg": "Invalid max players"
+    },
+    {
+      "code": 6014,
+      "name": "InvalidPredictionWindow",
+      "msg": "Invalid prediction window"
+    },
+    {
+      "code": 6015,
+      "name": "PredictionAlreadyLocked",
+      "msg": "Prediction already locked"
+    },
+    {
+      "code": 6016,
+      "name": "CannotChangePrediction",
+      "msg": "Cannot change prediction after lock"
+    },
+    {
+      "code": 6017,
+      "name": "AlreadyClaimed",
+      "msg": "Already claimed winnings"
+    },
+    {
+      "code": 6018,
+      "name": "NoWinnings",
+      "msg": "No winnings to claim"
+    },
+    {
+      "code": 6019,
+      "name": "PlayerNotInMatch",
+      "msg": "Player not in this match"
+    },
+    {
+      "code": 6020,
+      "name": "NotEnoughPlayers",
+      "msg": "Not enough players to start"
+    },
+    {
+      "code": 6021,
+      "name": "StalePrice",
+      "msg": "Price data is stale (older than 30 seconds)"
+    },
+    {
+      "code": 6022,
+      "name": "InvalidPythAccount",
+      "msg": "Invalid Pyth account or data"
+    },
+    {
+      "code": 6023,
+      "name": "PriceFeedMismatch",
+      "msg": "Price feed does not match expected feed"
+    },
+    {
+      "code": 6024,
+      "name": "PriceUnavailable",
+      "msg": "Price is unavailable or invalid"
+    },
+    {
+      "code": 6025,
+      "name": "ConfidenceIntervalTooWide",
+      "msg": "Confidence interval is too wide (>1%)"
+    },
+    {
+      "code": 6026,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 6027,
+      "name": "ArithmeticOverflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6028,
+      "name": "ArithmeticUnderflow",
+      "msg": "Arithmetic underflow"
+    },
+    {
+      "code": 6029,
+      "name": "UsernameTooLong",
+      "msg": "Username too long"
+    },
+    {
+      "code": 6030,
+      "name": "InvalidUsername",
+      "msg": "Invalid username characters"
+    }
+  ]
+}

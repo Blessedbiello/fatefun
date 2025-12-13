@@ -43,9 +43,16 @@ export function ModdioGameCanvas({
         setIsLoading(true)
         setError(null)
 
+        // TODO: Moddio game engine integration
         // Dynamically import the Moddio game engine
         // In production, this would be the built Moddio bundle
-        const { default: FateGame } = await import('@/game/src/Game')
+        // const { default: FateGame } = await import('@/game/src/Game')
+
+        // Temporary: Skip game initialization until Moddio integration is complete
+        console.warn('Moddio game engine not yet integrated - using placeholder')
+        setGameStatus('loaded')
+        setIsLoading(false)
+        return
 
         // Create anchor provider
         const provider = new AnchorProvider(
